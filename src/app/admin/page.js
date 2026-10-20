@@ -6,6 +6,8 @@ import Link from 'next/link';
 import {
   Users,
   UserPlus,
+  UserCheck,
+  Sparkles,
   ShieldCheck,
   Search,
   Trash2,
@@ -378,7 +380,7 @@ export default function AdminPage() {
                 <span className="sidebar-item-title">Roles & Scopes</span>
                 <span className="sidebar-item-desc">Multi-role privileges</span>
               </div>
-              <span className="sidebar-item-badge">{allUsers.length}</span>
+              <span className="sidebar-item-badge">{usersList.length}</span>
             </button>
 
             <button

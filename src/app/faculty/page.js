@@ -7,6 +7,7 @@ import {
   BookOpen,
   Users,
   CheckCircle,
+  ShieldCheck,
   Award,
   Calendar,
   Building,
