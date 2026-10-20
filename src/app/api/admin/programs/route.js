@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { createAcademicProgram } from '@/lib/db';
+import { createAcademicProgram, deleteAcademicProgram, listAllAcademicPrograms } from '@/lib/db';
+
+export async function GET(req) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const department_id = searchParams.get('department_id');
+    const programs = await listAllAcademicPrograms(department_id);
+    return NextResponse.json({ programs });
+  } catch (err) {
+    console.error('Error fetching programs:', err);
+    return NextResponse.json({ error: 'Failed to fetch academic programs' }, { status: 500 });
+  }
+}
 
 export async function POST(req) {
   const session = await auth();
@@ -31,5 +43,28 @@ export async function POST(req) {
   } catch (err) {
     console.error('Error creating program:', err);
     return NextResponse.json({ error: err.message || 'Failed to create academic program' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req) {
+  const session = await auth();
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.roles?.some((r) => r.code === 'ADMIN' || r.code === 'PRINCIPAL');
+
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized: Administrator or Principal privileges required' }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Program ID is required' }, { status: 400 });
+    }
+
+    await deleteAcademicProgram(id);
+    return NextResponse.json({ success: true, message: 'Program removed successfully' });
+  } catch (err) {
+    console.error('Error deleting program:', err);
+    return NextResponse.json({ error: err.message || 'Failed to delete program' }, { status: 500 });
   }
 }

@@ -14,6 +14,14 @@ const memoryStore = {
     { id: 'dept_maths', name: 'Department of Mathematics', code: 'MATH', type: 'SUPPORTING', description: 'Supporting allied science department providing complementary Mathematics and Statistics for Physics, Chemistry, and CS programs.', hod_email: 'hod.math@college.edu', is_active: true },
     { id: 'dept_phy_ed', name: 'Department of Physical Education', code: 'PHY_ED', type: 'SUPPORTING', description: 'Supporting department managing campus athletics, sports quota evaluation, and fitness courses.', hod_email: 'sports@college.edu', is_active: true },
   ],
+  
+  courses: [
+    { id: 'crs_bot_1b01', program_id: 'prog_bsc_bot', department_id: 'dept_botany', code: 'BOT1B01', name: 'Angiosperm Anatomy & Microtechnique', semester: 1, course_type: 'CORE', credits: 3, hours_per_week: 4, description: 'Internal structure of vegetative and reproductive organs; microtechnique and staining.', faculty_email: 'hod.botany@college.edu', is_active: true },
+    { id: 'crs_bot_2b02', program_id: 'prog_bsc_bot', department_id: 'dept_botany', code: 'BOT2B02', name: 'Phycology, Bryology & Pteridology', semester: 2, course_type: 'CORE', credits: 3, hours_per_week: 4, description: 'Evolutionary radiation of cryptogams, thallus organization, and lifecycle patterns.', faculty_email: 'hod.botany@college.edu', is_active: true },
+    { id: 'crs_arb_1a07', program_id: null, department_id: 'dept_arabic', code: 'ARB1A07', name: 'Communicative Arabic & Functional Grammar', semester: 1, course_type: 'COMMON', credits: 4, hours_per_week: 4, description: 'Common language course for science and commerce degree students.', faculty_email: 'hod.arabic@college.edu', is_active: true },
+    { id: 'crs_arb_2a08', program_id: null, department_id: 'dept_arabic', code: 'ARB2A08', name: 'Reading Arabic Literature & Essays', semester: 2, course_type: 'COMMON', credits: 4, hours_per_week: 4, description: 'Selected prose, poetry, and modern communication in Arabic.', faculty_email: 'hod.arabic@college.edu', is_active: true },
+    { id: 'crs_cs_1b01', program_id: 'prog_bsc_cs', department_id: 'dept_comp_sci', code: 'CS1B01', name: 'Problem Solving & C Programming', semester: 1, course_type: 'CORE', credits: 3, hours_per_week: 4, description: 'Procedural problem solving, control structures, pointers, and file operations.', faculty_email: 'hod.cse@college.edu', is_active: true },
+  ],
   academic_programs: [
     { id: 'prog_bsc_bot', department_id: 'dept_botany', name: 'B.Sc Botany (Plant Science & Biotech)', code: 'BSC_BOT', level: 'UG', duration_years: 3, total_semesters: 6, intake_capacity: 48, is_active: true },
     { id: 'prog_msc_bot', department_id: 'dept_botany', name: 'M.Sc Botany', code: 'MSC_BOT', level: 'PG', duration_years: 2, total_semesters: 4, intake_capacity: 18, is_active: true },
@@ -1667,3 +1675,214 @@ export async function createAcademicProgram({ department_id, name, code, level, 
   return newProg;
 }
 
+
+// -------------------------------------------------------------
+// DEPARTMENT & PROGRAM DELETION
+// -------------------------------------------------------------
+
+export async function deleteDepartment(id) {
+  await initDb();
+  const sql = getSql();
+  if (sql) {
+    try {
+      await sql`DELETE FROM courses WHERE department_id = ${id}`;
+      await sql`DELETE FROM academic_programs WHERE department_id = ${id}`;
+      await sql`DELETE FROM departments WHERE id = ${id}`;
+      return true;
+    } catch (err) {
+      console.error('deleteDepartment sql error:', err);
+      throw err;
+    }
+  }
+
+  memoryStore.departments = memoryStore.departments.filter(d => d.id !== id);
+  memoryStore.academic_programs = memoryStore.academic_programs.filter(p => p.department_id !== id);
+  memoryStore.courses = (memoryStore.courses || []).filter(c => c.department_id !== id);
+  return true;
+}
+
+export async function deleteAcademicProgram(id) {
+  await initDb();
+  const sql = getSql();
+  if (sql) {
+    try {
+      await sql`DELETE FROM courses WHERE program_id = ${id}`;
+      await sql`DELETE FROM academic_programs WHERE id = ${id}`;
+      return true;
+    } catch (err) {
+      console.error('deleteAcademicProgram sql error:', err);
+      throw err;
+    }
+  }
+
+  memoryStore.academic_programs = memoryStore.academic_programs.filter(p => p.id !== id);
+  memoryStore.courses = (memoryStore.courses || []).filter(c => c.program_id !== id);
+  return true;
+}
+
+export async function listAllAcademicPrograms(department_id = null) {
+  await initDb();
+  const sql = getSql();
+  if (sql) {
+    try {
+      if (department_id) {
+        return await sql`SELECT * FROM academic_programs WHERE department_id = ${department_id} AND is_active = TRUE ORDER BY name ASC`;
+      }
+      return await sql`SELECT * FROM academic_programs WHERE is_active = TRUE ORDER BY name ASC`;
+    } catch (err) {
+      console.error('listAllAcademicPrograms sql error:', err);
+    }
+  }
+
+  if (department_id) {
+    return memoryStore.academic_programs.filter(p => p.department_id === department_id && p.is_active);
+  }
+  return memoryStore.academic_programs.filter(p => p.is_active);
+}
+
+// -------------------------------------------------------------
+// COURSE MANAGEMENT (FACULTY & HOD)
+// -------------------------------------------------------------
+
+export async function listAllCourses({ department_id = null, program_id = null } = {}) {
+  await initDb();
+  const sql = getSql();
+  if (sql) {
+    try {
+      let query;
+      if (program_id && department_id) {
+        query = await sql`
+          SELECT c.*, d.name as department_name, p.name as program_name
+          FROM courses c
+          LEFT JOIN departments d ON c.department_id = d.id
+          LEFT JOIN academic_programs p ON c.program_id = p.id
+          WHERE (c.program_id = ${program_id} OR c.department_id = ${department_id}) AND c.is_active = TRUE
+          ORDER BY c.semester ASC, c.code ASC
+        `;
+      } else if (program_id) {
+        query = await sql`
+          SELECT c.*, d.name as department_name, p.name as program_name
+          FROM courses c
+          LEFT JOIN departments d ON c.department_id = d.id
+          LEFT JOIN academic_programs p ON c.program_id = p.id
+          WHERE c.program_id = ${program_id} AND c.is_active = TRUE
+          ORDER BY c.semester ASC, c.code ASC
+        `;
+      } else if (department_id) {
+        query = await sql`
+          SELECT c.*, d.name as department_name, p.name as program_name
+          FROM courses c
+          LEFT JOIN departments d ON c.department_id = d.id
+          LEFT JOIN academic_programs p ON c.program_id = p.id
+          WHERE c.department_id = ${department_id} AND c.is_active = TRUE
+          ORDER BY c.semester ASC, c.code ASC
+        `;
+      } else {
+        query = await sql`
+          SELECT c.*, d.name as department_name, p.name as program_name
+          FROM courses c
+          LEFT JOIN departments d ON c.department_id = d.id
+          LEFT JOIN academic_programs p ON c.program_id = p.id
+          WHERE c.is_active = TRUE
+          ORDER BY d.name ASC, c.semester ASC, c.code ASC
+        `;
+      }
+      return query;
+    } catch (err) {
+      console.error('listAllCourses sql error:', err);
+    }
+  }
+
+  const allCourses = memoryStore.courses || [];
+  return allCourses.filter(c => {
+    if (!c.is_active) return false;
+    if (program_id && c.program_id !== program_id) return false;
+    if (department_id && c.department_id !== department_id) return false;
+    return true;
+  }).map(c => {
+    const dept = (memoryStore.departments || []).find(d => d.id === c.department_id);
+    const prog = (memoryStore.academic_programs || []).find(p => p.id === c.program_id);
+    return {
+      ...c,
+      department_name: dept ? dept.name : 'Unknown Department',
+      program_name: prog ? prog.name : (c.program_id ? 'Special Program' : 'Common / All Degree Programs')
+    };
+  });
+}
+
+export async function createCourse({
+  program_id = null,
+  department_id,
+  code,
+  name,
+  semester = 1,
+  course_type = 'CORE',
+  credits = 3,
+  hours_per_week = 4,
+  description = '',
+  faculty_email = null
+}) {
+  await initDb();
+  const sql = getSql();
+  const id = `crs_${code.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now().toString(36)}`;
+
+  if (sql) {
+    try {
+      const rows = await sql`
+        INSERT INTO courses (
+          id, program_id, department_id, code, name, semester, course_type,
+          credits, hours_per_week, description, faculty_email, is_active
+        ) VALUES (
+          ${id}, ${program_id || null}, ${department_id}, ${code.toUpperCase()},
+          ${name}, ${parseInt(semester, 10) || 1}, ${course_type},
+          ${parseInt(credits, 10) || 3}, ${parseInt(hours_per_week, 10) || 4},
+          ${description || ''}, ${faculty_email || null}, TRUE
+        )
+        RETURNING *;
+      `;
+      return rows[0];
+    } catch (err) {
+      console.error('createCourse sql error:', err);
+      throw err;
+    }
+  }
+
+  const newCourse = {
+    id,
+    program_id: program_id || null,
+    department_id,
+    code: code.toUpperCase(),
+    name,
+    semester: parseInt(semester, 10) || 1,
+    course_type,
+    credits: parseInt(credits, 10) || 3,
+    hours_per_week: parseInt(hours_per_week, 10) || 4,
+    description: description || '',
+    faculty_email: faculty_email || null,
+    is_active: true,
+    created_at: new Date().toISOString()
+  };
+
+  if (!memoryStore.courses) memoryStore.courses = [];
+  memoryStore.courses.push(newCourse);
+  return newCourse;
+}
+
+export async function deleteCourse(id) {
+  await initDb();
+  const sql = getSql();
+  if (sql) {
+    try {
+      await sql`DELETE FROM courses WHERE id = ${id}`;
+      return true;
+    } catch (err) {
+      console.error('deleteCourse sql error:', err);
+      throw err;
+    }
+  }
+
+  if (memoryStore.courses) {
+    memoryStore.courses = memoryStore.courses.filter(c => c.id !== id);
+  }
+  return true;
+}

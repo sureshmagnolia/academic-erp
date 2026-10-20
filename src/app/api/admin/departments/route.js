@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { listAllDepartments, createDepartment } from '@/lib/db';
+import { listAllDepartments, createDepartment, deleteDepartment } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -32,5 +32,28 @@ export async function POST(req) {
   } catch (err) {
     console.error('Error creating department:', err);
     return NextResponse.json({ error: err.message || 'Failed to create department' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req) {
+  const session = await auth();
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.roles?.some((r) => r.code === 'ADMIN' || r.code === 'PRINCIPAL');
+
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized: Administrator or Principal privileges required' }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Department ID is required' }, { status: 400 });
+    }
+
+    await deleteDepartment(id);
+    return NextResponse.json({ success: true, message: 'Department removed successfully' });
+  } catch (err) {
+    console.error('Error deleting department:', err);
+    return NextResponse.json({ error: err.message || 'Failed to delete department' }, { status: 500 });
   }
 }

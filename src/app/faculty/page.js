@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import {
-  BookOpen,
+  BookOpen, PlusCircle, Trash2, Layers, Tag, AlignLeft, Info,
   Users,
   CheckCircle,
   ShieldCheck,
@@ -35,6 +35,25 @@ export default function FacultyPage() {
   const [joinRequests, setJoinRequests] = useState([]);
   const [changeRequests, setChangeRequests] = useState([]);
   const [notes, setNotes] = useState('');
+  
+  // Courses & Curriculum State
+  const [coursesList, setCoursesList] = useState([]);
+  const [programsList, setProgramsList] = useState([]);
+  const [departmentsList, setDepartmentsList] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [showAddCourseModal, setShowAddCourseModal] = useState(false);
+  const [courseFilterDept, setCourseFilterDept] = useState('ALL');
+
+  // New Course Form Fields
+  const [newCourseCode, setNewCourseCode] = useState('');
+  const [newCourseName, setNewCourseName] = useState('');
+  const [newCourseDept, setNewCourseDept] = useState('');
+  const [newCourseProg, setNewCourseProg] = useState('');
+  const [newCourseSem, setNewCourseSem] = useState(1);
+  const [newCourseType, setNewCourseType] = useState('CORE');
+  const [newCourseCredits, setNewCourseCredits] = useState(3);
+  const [newCourseHours, setNewCourseHours] = useState(4);
+  const [newCourseDesc, setNewCourseDesc] = useState('');
   const [loadingApprovals, setLoadingApprovals] = useState(true);
 
   // Class Roster State
@@ -70,8 +89,91 @@ export default function FacultyPage() {
   useEffect(() => {
     if (session?.user && isFaculty) {
       loadDepartmentApprovals();
+      loadCoursesData();
     }
   }, [session, isFaculty]);
+
+  
+  async function loadCoursesData() {
+    setLoadingCourses(true);
+    try {
+      const [resCrs, resProg, resDept] = await Promise.all([
+        fetch('/api/courses').then(r => r.json()).catch(() => ({ courses: [] })),
+        fetch('/api/admin/programs').then(r => r.json()).catch(() => ({ programs: [] })),
+        fetch('/api/admin/departments').then(r => r.json()).catch(() => ({ departments: [] })),
+      ]);
+      if (resCrs.courses) setCoursesList(resCrs.courses);
+      if (resProg.programs) setProgramsList(resProg.programs);
+      if (resDept.departments) {
+        setDepartmentsList(resDept.departments);
+        if (resDept.departments.length > 0 && !newCourseDept) {
+          setNewCourseDept(resDept.departments[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading courses:', err);
+    } finally {
+      setLoadingCourses(false);
+    }
+  }
+
+  async function handleCreateCourse(e) {
+    e.preventDefault();
+    if (!newCourseCode.trim() || !newCourseName.trim() || !newCourseDept) {
+      alert('Course Code, Course Name, and Department are required.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          program_id: newCourseProg || null,
+          department_id: newCourseDept,
+          code: newCourseCode.trim(),
+          name: newCourseName.trim(),
+          semester: parseInt(newCourseSem, 10),
+          course_type: newCourseType,
+          credits: parseInt(newCourseCredits, 10),
+          hours_per_week: parseInt(newCourseHours, 10),
+          description: newCourseDesc.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCoursesList([...coursesList, data.course]);
+        setShowAddCourseModal(false);
+        setNewCourseCode('');
+        setNewCourseName('');
+        setNewCourseDesc('');
+        alert('Course added to program successfully!');
+      } else {
+        alert(data.error || 'Failed to add course.');
+      }
+    } catch (err) {
+      alert('Network error adding course.');
+    }
+  }
+
+  async function handleDeleteCourse(courseId, courseName) {
+    if (!window.confirm(`Are you sure you want to remove the course "${courseName}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/courses?id=${courseId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCoursesList(coursesList.filter(c => c.id !== courseId));
+        alert('Course removed successfully.');
+      } else {
+        alert(data.error || 'Failed to delete course.');
+      }
+    } catch (err) {
+      alert('Network error deleting course.');
+    }
+  }
 
   // Review Join Request
   async function handleReviewJoin(requestId, action) {
@@ -213,6 +315,21 @@ export default function FacultyPage() {
               <span className={`sidebar-item-badge ${changeRequests.length > 0 ? 'highlight-amber' : ''}`}>
                 {changeRequests.length}
               </span>
+            </button>
+
+            
+            <button
+              onClick={() => setActiveTab('courses')}
+              className={`sidebar-nav-item ${activeTab === 'courses' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <BookOpen size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Program Courses</span>
+                <span className="sidebar-item-desc">Curriculum & syllabus</span>
+              </div>
+              <span className="sidebar-item-badge">{coursesList.length}</span>
             </button>
 
             <button

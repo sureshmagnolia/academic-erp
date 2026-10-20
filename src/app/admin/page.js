@@ -181,6 +181,51 @@ export default function AdminPage() {
 
   // Create Enrollment Token
   // Create New Department
+  
+  async function handleDeleteDepartment(deptId, deptName) {
+    if (!window.confirm(`Are you sure you want to remove ${deptName}? This will permanently remove all attached degree programs and curriculum records.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/departments?id=${deptId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDepartmentsList(departmentsList.filter((d) => d.id !== deptId));
+        alert(`Department "${deptName}" removed successfully.`);
+      } else {
+        alert(data.error || 'Failed to remove department.');
+      }
+    } catch (err) {
+      alert('Network error deleting department.');
+    }
+  }
+
+  async function handleDeleteProgram(deptId, progId, progName) {
+    if (!window.confirm(`Are you sure you want to remove the degree program "${progName}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/programs?id=${progId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDepartmentsList(departmentsList.map(d => {
+          if (d.id === deptId) {
+            return {
+              ...d,
+              programs: (d.programs || []).filter(p => p.id !== progId)
+            };
+          }
+          return d;
+        }));
+        alert(`Program "${progName}" removed successfully.`);
+      } else {
+        alert(data.error || 'Failed to remove program.');
+      }
+    } catch (err) {
+      alert('Network error deleting program.');
+    }
+  }
+
   async function handleCreateDepartment(e) {
     e.preventDefault();
     if (!newDeptName.trim() || !newDeptCode.trim()) return;
@@ -640,10 +685,20 @@ export default function AdminPage() {
                   <div key={dept.id} className="dept-card">
                     <div className="dept-card-top">
                       <div className="dept-badge-row">
-                        <span className="dept-code-tag">{dept.code}</span>
-                        <span className={`dept-type-badge ${isOffering ? 'offering' : 'supporting'}`}>
-                          {isOffering ? '🎓 DEGREE-GRANTING' : '🤝 SUPPORTING / ALLIED'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="dept-code-tag">{dept.code}</span>
+                          <span className={`dept-type-badge ${isOffering ? 'offering' : 'supporting'}`}>
+                            {isOffering ? '🎓 DEGREE-GRANTING' : '🤝 SUPPORTING / ALLIED'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          title="Remove Department"
+                          onClick={() => handleDeleteDepartment(dept.id, dept.name)}
+                          className="btn-delete-item-sm"
+                        >
+                          <Trash2 size={13} /> Remove
+                        </button>
                       </div>
                       <h3 className="dept-name">{dept.name}</h3>
                       <p className="dept-desc-text">{dept.description}</p>
@@ -676,9 +731,19 @@ export default function AdminPage() {
                             <div className="programs-chips-list">
                               {programs.map((p) => (
                                 <div key={p.id} className="program-chip">
-                                  <div className="prog-title-row">
-                                    <span className="prog-level-tag">{p.level}</span>
-                                    <span className="prog-name-text">{p.name}</span>
+                                  <div className="prog-title-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <span className="prog-level-tag">{p.level}</span>
+                                      <span className="prog-name-text">{p.name}</span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      title="Remove Degree Program"
+                                      onClick={() => handleDeleteProgram(dept.id, p.id, p.name)}
+                                      className="btn-delete-prog-icon"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
                                   </div>
                                   <div className="prog-meta-sub">
                                     <span>{p.duration_years} Years ({p.total_semesters} Sems)</span>
