@@ -103,8 +103,22 @@ export default function OnboardingWizardPage() {
 
   // Load existing profile & department lists
   useEffect(() => {
+    if (status === 'loading') return;
+    if (status === 'unauthenticated') {
+      fetch('/api/admin/departments').then(r => r.json()).then(data => {
+        if (data.departments) {
+          const degreeDepts = data.departments.filter(d => d.type === 'PROGRAM_OFFERING');
+          setDepartments(degreeDepts.length > 0 ? degreeDepts : data.departments);
+        }
+      }).catch(() => {});
+      fetch('/api/admin/programs').then(r => r.json()).then(data => {
+        if (data.programs) setPrograms(data.programs);
+      }).catch(() => {});
+      setLoading(false);
+      return;
+    }
+
     async function initData() {
-      if (!session?.user?.email) return;
       try {
         // Load Departments & Programs
         const [resDept, resProg, resProf] = await Promise.all([
@@ -189,7 +203,7 @@ export default function OnboardingWizardPage() {
       }
     }
     initData();
-  }, [session]);
+  }, [session, status]);
 
   const isLocked = profile?.profile_status === 'APPROVED';
   const isSubmitted = profile?.profile_status === 'SUBMITTED';
