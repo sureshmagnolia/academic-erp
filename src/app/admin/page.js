@@ -70,7 +70,7 @@ export default function AdminPage() {
   const [newProgCode, setNewProgCode] = useState('');
   const [newProgLevel, setNewProgLevel] = useState('UG');
   const [newProgDuration, setNewProgDuration] = useState(3);
-  const [newProgSems, setNewProgSems] = useState(6);
+  const [newProgSems, setNewProgSems] = useState(8);
   const [newProgIntake, setNewProgIntake] = useState(60);
   const [progSubmitting, setProgSubmitting] = useState(false);
 
@@ -747,6 +747,11 @@ export default function AdminPage() {
                                   </div>
                                   <div className="prog-meta-sub">
                                     <span>{p.duration_years} Years ({p.total_semesters} Sems)</span>
+                                    {p.level === 'UG' && (
+                                      <span className="fyugp-exit-badge" title="Four Year Undergraduate Programme with Exit Option at 3rd Year">
+                                        ⚡ FYUGP (Exit at 3rd Yr)
+                                      </span>
+                                    )}
                                     <span>&bull;</span>
                                     <span>Intake: <strong>{p.intake_capacity}</strong> Seats</span>
                                   </div>

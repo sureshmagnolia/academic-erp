@@ -457,7 +457,7 @@ export default function OnboardingWizardPage() {
                   onChange={(e) => setProgramLevel(e.target.value)}
                   className="form-input"
                 >
-                  <option value="UG">Undergraduate (UG / 3-Year Bachelor)</option>
+                  <option value="UG">Undergraduate (FYUGP - 4 Years / 8 Semesters with 3-Year Exit Option)</option>
                   <option value="PG">Postgraduate (PG / 2-Year Master)</option>
                   <option value="PHD">Doctoral Research (PhD)</option>
                   <option value="DIPLOMA">Diploma / Certificate</option>
