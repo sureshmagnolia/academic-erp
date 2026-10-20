@@ -5,6 +5,9 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import {
   Users,
+  BookOpen,
+  Layers,
+  FolderPlus,
   UserPlus,
   UserCheck,
   Sparkles,
@@ -47,6 +50,30 @@ export default function AdminPage() {
   const [successMsg, setSuccessMsg] = useState('');
 
   // 1. QR Enrollment Tokens State
+  // 0. Academic Structure State (Departments & Programs)
+  const [departmentsList, setDepartmentsList] = useState([]);
+  const [deptFilter, setDeptFilter] = useState('ALL'); // 'ALL', 'PROGRAM_OFFERING', 'SUPPORTING'
+  const [showAddDeptModal, setShowAddDeptModal] = useState(false);
+  const [showAddProgModal, setShowAddProgModal] = useState(false);
+  const [targetDeptForProg, setTargetDeptForProg] = useState(null);
+
+  // New Department Form
+  const [newDeptName, setNewDeptName] = useState('');
+  const [newDeptCode, setNewDeptCode] = useState('');
+  const [newDeptType, setNewDeptType] = useState('PROGRAM_OFFERING');
+  const [newDeptDesc, setNewDeptDesc] = useState('');
+  const [newDeptHod, setNewDeptHod] = useState('');
+  const [deptSubmitting, setDeptSubmitting] = useState(false);
+
+  // New Program Form
+  const [newProgName, setNewProgName] = useState('');
+  const [newProgCode, setNewProgCode] = useState('');
+  const [newProgLevel, setNewProgLevel] = useState('UG');
+  const [newProgDuration, setNewProgDuration] = useState(3);
+  const [newProgSems, setNewProgSems] = useState(6);
+  const [newProgIntake, setNewProgIntake] = useState(60);
+  const [progSubmitting, setProgSubmitting] = useState(false);
+
   const [tokens, setTokens] = useState([]);
   const [tokenTitle, setTokenTitle] = useState('');
   const [tokenRole, setTokenRole] = useState('STUDENT');
@@ -107,6 +134,11 @@ export default function AdminPage() {
     setErrorMsg('');
     try {
       // 1. Enrollment Tokens
+      // 0. Departments & Academic Structure
+      const resDepts = await fetch('/api/admin/departments');
+      const dataDepts = await resDepts.json();
+      if (dataDepts.departments) setDepartmentsList(dataDepts.departments);
+
       const resTokens = await fetch('/api/admin/enrollment-tokens');
       const dataTokens = await resTokens.json();
       if (dataTokens.tokens) setTokens(dataTokens.tokens);
@@ -148,6 +180,82 @@ export default function AdminPage() {
   }, [session]);
 
   // Create Enrollment Token
+  // Create New Department
+  async function handleCreateDepartment(e) {
+    e.preventDefault();
+    if (!newDeptName.trim() || !newDeptCode.trim()) return;
+
+    setDeptSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/admin/departments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newDeptName.trim(),
+          code: newDeptCode.trim().toUpperCase(),
+          type: newDeptType,
+          description: newDeptDesc.trim(),
+          hod_email: newDeptHod.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(`Department "${newDeptName}" registered successfully!`);
+        setShowAddDeptModal(false);
+        setNewDeptName('');
+        setNewDeptCode('');
+        setNewDeptDesc('');
+        setNewDeptHod('');
+        loadAllData();
+      } else {
+        setErrorMsg(data.error || 'Failed to create department.');
+      }
+    } catch {
+      setErrorMsg('Network error while creating department.');
+    } finally {
+      setDeptSubmitting(false);
+    }
+  }
+
+  // Create Academic Program under a Department
+  async function handleCreateProgram(e) {
+    e.preventDefault();
+    if (!targetDeptForProg || !newProgName.trim() || !newProgCode.trim()) return;
+
+    setProgSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/admin/programs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          department_id: targetDeptForProg.id,
+          name: newProgName.trim(),
+          code: newProgCode.trim().toUpperCase(),
+          level: newProgLevel,
+          duration_years: newProgDuration,
+          total_semesters: newProgSems,
+          intake_capacity: newProgIntake,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(`Program "${newProgName}" added to ${targetDeptForProg.name}!`);
+        setShowAddProgModal(false);
+        setNewProgName('');
+        setNewProgCode('');
+        loadAllData();
+      } else {
+        setErrorMsg(data.error || 'Failed to create academic program.');
+      }
+    } catch {
+      setErrorMsg('Network error while creating program.');
+    } finally {
+      setProgSubmitting(false);
+    }
+  }
+
   async function handleCreateToken(e) {
     e.preventDefault();
     setTokenSubmitting(true);
@@ -326,95 +434,136 @@ export default function AdminPage() {
       {/* Side Panel Dashboard Layout */}
       <div className="admin-sidepanel-layout">
         <aside className="admin-sidebar-nav">
-          <div className="sidebar-group-title">GOVERNANCE MODULES</div>
-          <div className="sidebar-nav-list">
-            <button
-              onClick={() => setActiveAdminTab('qr_enrollment')}
-              className={`sidebar-nav-item ${activeAdminTab === 'qr_enrollment' ? 'active' : ''}`}
-            >
-              <div className="sidebar-item-icon">
-                <QrCode size={18} />
-              </div>
-              <div className="sidebar-item-info">
-                <span className="sidebar-item-title">QR & Link Hub</span>
-                <span className="sidebar-item-desc">Onboarding tokens</span>
-              </div>
-              <span className="sidebar-item-badge">{tokens.length}</span>
-            </button>
+          {/* GROUP 1: ACADEMIC STRUCTURE */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-title">ACADEMIC STRUCTURE</div>
+            <div className="sidebar-nav-list">
+              <button
+                onClick={() => setActiveAdminTab('departments')}
+                className={`sidebar-nav-item ${activeAdminTab === 'departments' ? 'active' : ''}`}
+              >
+                <div className="sidebar-item-icon">
+                  <Building size={18} />
+                </div>
+                <div className="sidebar-item-info">
+                  <span className="sidebar-item-title">Departments & Programs</span>
+                  <span className="sidebar-item-desc">Botany, Arabic, CS & Degrees</span>
+                </div>
+                <span className="sidebar-item-badge">{departmentsList.length}</span>
+              </button>
+            </div>
+          </div>
 
-            <button
-              onClick={() => setActiveAdminTab('join_requests')}
-              className={`sidebar-nav-item ${activeAdminTab === 'join_requests' ? 'active' : ''}`}
-            >
-              <div className="sidebar-item-icon">
-                <UserPlus size={18} />
-              </div>
-              <div className="sidebar-item-info">
-                <span className="sidebar-item-title">Join Requests</span>
-                <span className="sidebar-item-desc">Candidate verification</span>
-              </div>
-              <span className={`sidebar-item-badge ${joinRequests.length > 0 ? 'highlight' : ''}`}>
-                {joinRequests.length}
-              </span>
-            </button>
+          {/* GROUP 2: ADMISSIONS & ONBOARDING */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-title">ADMISSIONS & ONBOARDING</div>
+            <div className="sidebar-nav-list">
+              <button
+                onClick={() => setActiveAdminTab('qr_enrollment')}
+                className={`sidebar-nav-item ${activeAdminTab === 'qr_enrollment' ? 'active' : ''}`}
+              >
+                <div className="sidebar-item-icon">
+                  <QrCode size={18} />
+                </div>
+                <div className="sidebar-item-info">
+                  <span className="sidebar-item-title">QR & Link Hub</span>
+                  <span className="sidebar-item-desc">Onboarding tokens</span>
+                </div>
+                <span className="sidebar-item-badge">{tokens.length}</span>
+              </button>
 
-            <button
-              onClick={() => setActiveAdminTab('change_requests')}
-              className={`sidebar-nav-item ${activeAdminTab === 'change_requests' ? 'active' : ''}`}
-            >
-              <div className="sidebar-item-icon">
-                <FileEdit size={18} />
-              </div>
-              <div className="sidebar-item-info">
-                <span className="sidebar-item-title">Change Requests</span>
-                <span className="sidebar-item-desc">Maker-checker edits</span>
-              </div>
-              <span className={`sidebar-item-badge ${changeRequests.length > 0 ? 'highlight-amber' : ''}`}>
-                {changeRequests.length}
-              </span>
-            </button>
+              <button
+                onClick={() => setActiveAdminTab('join_requests')}
+                className={`sidebar-nav-item ${activeAdminTab === 'join_requests' ? 'active' : ''}`}
+              >
+                <div className="sidebar-item-icon">
+                  <UserPlus size={18} />
+                </div>
+                <div className="sidebar-item-info">
+                  <span className="sidebar-item-title">Join Requests</span>
+                  <span className="sidebar-item-desc">Candidate verification</span>
+                </div>
+                <span className={`sidebar-item-badge ${joinRequests.length > 0 ? 'highlight' : ''}`}>
+                  {joinRequests.length}
+                </span>
+              </button>
+            </div>
+          </div>
 
-            <button
-              onClick={() => setActiveAdminTab('roles')}
-              className={`sidebar-nav-item ${activeAdminTab === 'roles' ? 'active' : ''}`}
-            >
-              <div className="sidebar-item-icon">
-                <Briefcase size={18} />
-              </div>
-              <div className="sidebar-item-info">
-                <span className="sidebar-item-title">Roles & Scopes</span>
-                <span className="sidebar-item-desc">Multi-role privileges</span>
-              </div>
-              <span className="sidebar-item-badge">{usersList.length}</span>
-            </button>
+          {/* GROUP 3: DATA GOVERNANCE */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-title">DATA GOVERNANCE</div>
+            <div className="sidebar-nav-list">
+              <button
+                onClick={() => setActiveAdminTab('change_requests')}
+                className={`sidebar-nav-item ${activeAdminTab === 'change_requests' ? 'active' : ''}`}
+              >
+                <div className="sidebar-item-icon">
+                  <FileEdit size={18} />
+                </div>
+                <div className="sidebar-item-info">
+                  <span className="sidebar-item-title">Change Requests</span>
+                  <span className="sidebar-item-desc">Maker-checker edits</span>
+                </div>
+                <span className={`sidebar-item-badge ${changeRequests.length > 0 ? 'highlight-amber' : ''}`}>
+                  {changeRequests.length}
+                </span>
+              </button>
 
-            <button
-              onClick={() => setActiveAdminTab('scholars')}
-              className={`sidebar-nav-item ${activeAdminTab === 'scholars' ? 'active' : ''}`}
-            >
-              <div className="sidebar-item-icon">
-                <Microscope size={18} />
-              </div>
-              <div className="sidebar-item-info">
-                <span className="sidebar-item-title">Research Scholars</span>
-                <span className="sidebar-item-desc">PhD & supervisor link</span>
-              </div>
-              <span className="sidebar-item-badge">{scholars.length}</span>
-            </button>
+              <button
+                onClick={() => setActiveAdminTab('roles')}
+                className={`sidebar-nav-item ${activeAdminTab === 'roles' ? 'active' : ''}`}
+              >
+                <div className="sidebar-item-icon">
+                  <Briefcase size={18} />
+                </div>
+                <div className="sidebar-item-info">
+                  <span className="sidebar-item-title">Roles & Scopes</span>
+                  <span className="sidebar-item-desc">Multi-role privileges</span>
+                </div>
+                <span className="sidebar-item-badge">{usersList.length}</span>
+              </button>
+            </div>
+          </div>
 
-            <button
-              onClick={() => setActiveAdminTab('announcements')}
-              className={`sidebar-nav-item ${activeAdminTab === 'announcements' ? 'active' : ''}`}
-            >
-              <div className="sidebar-item-icon">
-                <Bell size={18} />
-              </div>
-              <div className="sidebar-item-info">
-                <span className="sidebar-item-title">Circulars</span>
-                <span className="sidebar-item-desc">Campus notices</span>
-              </div>
-              <span className="sidebar-item-badge">{announcements.length}</span>
-            </button>
+          {/* GROUP 4: RESEARCH & DOCTORAL */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-title">RESEARCH & DOCTORAL</div>
+            <div className="sidebar-nav-list">
+              <button
+                onClick={() => setActiveAdminTab('scholars')}
+                className={`sidebar-nav-item ${activeAdminTab === 'scholars' ? 'active' : ''}`}
+              >
+                <div className="sidebar-item-icon">
+                  <Microscope size={18} />
+                </div>
+                <div className="sidebar-item-info">
+                  <span className="sidebar-item-title">Research Scholars</span>
+                  <span className="sidebar-item-desc">PhD & supervisor link</span>
+                </div>
+                <span className="sidebar-item-badge">{scholars.length}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* GROUP 5: CAMPUS LIFE */}
+          <div className="sidebar-group">
+            <div className="sidebar-group-title">CAMPUS LIFE</div>
+            <div className="sidebar-nav-list">
+              <button
+                onClick={() => setActiveAdminTab('announcements')}
+                className={`sidebar-nav-item ${activeAdminTab === 'announcements' ? 'active' : ''}`}
+              >
+                <div className="sidebar-item-icon">
+                  <Bell size={18} />
+                </div>
+                <div className="sidebar-item-info">
+                  <span className="sidebar-item-title">Circulars</span>
+                  <span className="sidebar-item-desc">Campus notices</span>
+                </div>
+                <span className="sidebar-item-badge">{announcements.length}</span>
+              </button>
+            </div>
           </div>
 
           <div className="sidebar-status-card">
@@ -437,6 +586,318 @@ export default function AdminPage() {
         <main className="admin-sidepanel-content">
 
       {/* ------------------------------------------------------------- */}
+      {/* ------------------------------------------------------------- */}
+      {/* TAB 0: ACADEMIC STRUCTURE - DEPARTMENTS & PROGRAMS */}
+      {/* ------------------------------------------------------------- */}
+      {activeAdminTab === 'departments' && (
+        <div className="tab-section-content">
+          <div className="dept-header-card">
+            <div className="dept-header-info">
+              <h2 className="dept-title">Academic Departments & Degree Program Governance</h2>
+              <p className="dept-desc">
+                Configure <strong>Program-Offering Departments</strong> (conducting independent degree programs like B.Sc Botany, M.Sc Botany, Computer Science) and <strong>Supporting / Auxiliary Departments</strong> (offering second languages, open electives, and allied courses like Arabic, English, Mathematics to other degrees).
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAddDeptModal(true)}
+              className="btn-add-dept"
+            >
+              <PlusCircle size={16} /> Add New Department
+            </button>
+          </div>
+
+          {/* Department Filter Tabs */}
+          <div className="dept-filter-bar">
+            <button
+              onClick={() => setDeptFilter('ALL')}
+              className={`dept-filter-pill ${deptFilter === 'ALL' ? 'active' : ''}`}
+            >
+              All Departments ({departmentsList.length})
+            </button>
+            <button
+              onClick={() => setDeptFilter('PROGRAM_OFFERING')}
+              className={`dept-filter-pill ${deptFilter === 'PROGRAM_OFFERING' ? 'active' : ''}`}
+            >
+              🎓 Degree-Granting ({departmentsList.filter((d) => d.type === 'PROGRAM_OFFERING').length})
+            </button>
+            <button
+              onClick={() => setDeptFilter('SUPPORTING')}
+              className={`dept-filter-pill ${deptFilter === 'SUPPORTING' ? 'active' : ''}`}
+            >
+              🤝 Supporting / Auxiliary ({departmentsList.filter((d) => d.type === 'SUPPORTING').length})
+            </button>
+          </div>
+
+          {/* Departments Grid */}
+          <div className="departments-grid">
+            {departmentsList
+              .filter((d) => deptFilter === 'ALL' || d.type === deptFilter)
+              .map((dept) => {
+                const isOffering = dept.type === 'PROGRAM_OFFERING';
+                const programs = dept.programs || [];
+
+                return (
+                  <div key={dept.id} className="dept-card">
+                    <div className="dept-card-top">
+                      <div className="dept-badge-row">
+                        <span className="dept-code-tag">{dept.code}</span>
+                        <span className={`dept-type-badge ${isOffering ? 'offering' : 'supporting'}`}>
+                          {isOffering ? '🎓 DEGREE-GRANTING' : '🤝 SUPPORTING / ALLIED'}
+                        </span>
+                      </div>
+                      <h3 className="dept-name">{dept.name}</h3>
+                      <p className="dept-desc-text">{dept.description}</p>
+
+                      <div className="dept-hod-info">
+                        <span className="lbl">HoD / Faculty Head:</span>
+                        <span className="val">{dept.hod_email || 'Not Designated'}</span>
+                      </div>
+                    </div>
+
+                    <div className="dept-card-bottom">
+                      {isOffering ? (
+                        <div className="dept-programs-section">
+                          <div className="programs-header">
+                            <span className="programs-label">Conferred Degree Programs ({programs.length}):</span>
+                            <button
+                              onClick={() => {
+                                setTargetDeptForProg(dept);
+                                setShowAddProgModal(true);
+                              }}
+                              className="btn-add-prog-sm"
+                            >
+                              <PlusCircle size={13} /> Add Program
+                            </button>
+                          </div>
+
+                          {programs.length === 0 ? (
+                            <div className="no-programs-hint">No active degree programs added yet.</div>
+                          ) : (
+                            <div className="programs-chips-list">
+                              {programs.map((p) => (
+                                <div key={p.id} className="program-chip">
+                                  <div className="prog-title-row">
+                                    <span className="prog-level-tag">{p.level}</span>
+                                    <span className="prog-name-text">{p.name}</span>
+                                  </div>
+                                  <div className="prog-meta-sub">
+                                    <span>{p.duration_years} Years ({p.total_semesters} Sems)</span>
+                                    <span>&bull;</span>
+                                    <span>Intake: <strong>{p.intake_capacity}</strong> Seats</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="supporting-dept-notice">
+                          <span className="notice-icon">ℹ️</span>
+                          <div className="notice-text">
+                            <strong>Auxiliary Curriculum Provider</strong>
+                            <p>Runs common courses, second languages (e.g. Arabic), and allied electives for students enrolled across other degree programs.</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* Add Department Modal */}
+          {showAddDeptModal && (
+            <div className="modal-overlay">
+              <div className="modal-card">
+                <div className="modal-header">
+                  <div className="modal-title-row">
+                    <Building size={20} className="text-purple" />
+                    <h3>Add Academic Department</h3>
+                  </div>
+                  <button onClick={() => setShowAddDeptModal(false)} className="btn-close-modal">&times;</button>
+                </div>
+
+                <form onSubmit={handleCreateDepartment} className="admin-form">
+                  <div className="form-group">
+                    <label className="form-label">Department Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Department of Botany or Department of Arabic"
+                      value={newDeptName}
+                      onChange={(e) => setNewDeptName(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Department Code *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. BOT, ARB, ENG"
+                        value={newDeptCode}
+                        onChange={(e) => setNewDeptCode(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Classification / Role *</label>
+                      <select
+                        value={newDeptType}
+                        onChange={(e) => setNewDeptType(e.target.value)}
+                        className="form-select"
+                      >
+                        <option value="PROGRAM_OFFERING">Degree-Granting (Runs Own UG/PG Programs)</option>
+                        <option value="SUPPORTING">Supporting / Auxiliary (Offers Courses for Other Programs)</option>
+                        <option value="RESEARCH_CENTER">Specialized Research Center</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Head of Department (HoD) Email</label>
+                    <input
+                      type="email"
+                      placeholder="e.g. hod.botany@college.edu"
+                      value={newDeptHod}
+                      onChange={(e) => setNewDeptHod(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Department Mandate & Description</label>
+                    <textarea
+                      rows="3"
+                      placeholder="e.g. Offers Common Arabic Language & Open Electives across undergraduate degree programmes."
+                      value={newDeptDesc}
+                      onChange={(e) => setNewDeptDesc(e.target.value)}
+                      className="form-textarea"
+                    />
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" onClick={() => setShowAddDeptModal(false)} className="btn-cancel">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={deptSubmitting} className="btn-primary-action">
+                      {deptSubmitting ? 'Registering Department...' : 'Register Department'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Add Program Modal */}
+          {showAddProgModal && targetDeptForProg && (
+            <div className="modal-overlay">
+              <div className="modal-card">
+                <div className="modal-header">
+                  <div className="modal-title-row">
+                    <GraduationCap size={20} className="text-green" />
+                    <h3>Add Degree Program to {targetDeptForProg.name}</h3>
+                  </div>
+                  <button onClick={() => setShowAddProgModal(false)} className="btn-close-modal">&times;</button>
+                </div>
+
+                <form onSubmit={handleCreateProgram} className="admin-form">
+                  <div className="form-group">
+                    <label className="form-label">Program Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. B.Sc Botany or M.Sc Botany"
+                      value={newProgName}
+                      onChange={(e) => setNewProgName(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Program Code *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. BSC_BOT, MSC_BOT"
+                        value={newProgCode}
+                        onChange={(e) => setNewProgCode(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Degree Level *</label>
+                      <select
+                        value={newProgLevel}
+                        onChange={(e) => setNewProgLevel(e.target.value)}
+                        className="form-select"
+                      >
+                        <option value="UG">Undergraduate (UG)</option>
+                        <option value="PG">Postgraduate (PG)</option>
+                        <option value="PHD">Doctoral (Ph.D)</option>
+                        <option value="DIPLOMA">Diploma</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Duration (Years)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={newProgDuration}
+                        onChange={(e) => setNewProgDuration(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Total Semesters</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={newProgSems}
+                        onChange={(e) => setNewProgSems(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Intake Capacity (Seats)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="500"
+                        value={newProgIntake}
+                        onChange={(e) => setNewProgIntake(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" onClick={() => setShowAddProgModal(false)} className="btn-cancel">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={progSubmitting} className="btn-primary-action">
+                      {progSubmitting ? 'Adding Program...' : 'Add Program'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB 1: DYNAMIC QR & LINK ENROLLMENT HUB */}
       {/* ------------------------------------------------------------- */}
       {activeAdminTab === 'qr_enrollment' && (

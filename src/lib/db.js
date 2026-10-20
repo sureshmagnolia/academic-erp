@@ -5,6 +5,22 @@ export { MASTER_ROLES, DEPARTMENTS_CATALOG, FORM_REFERENCE_DATA };
 
 // In-Memory fallback store for environments without live Postgres credentials
 const memoryStore = {
+  departments: [
+    { id: 'dept_botany', name: 'Department of Botany', code: 'BOT', type: 'PROGRAM_OFFERING', description: 'Degree-offering life sciences department conducting undergraduate and postgraduate botanical programs.', hod_email: 'hod.botany@college.edu', is_active: true },
+    { id: 'dept_comp_sci', name: 'Computer Science & Engineering', code: 'CSE', type: 'PROGRAM_OFFERING', description: 'Degree-offering computational sciences department running B.Sc and M.Sc programs.', hod_email: 'hod.cse@college.edu', is_active: true },
+    { id: 'dept_commerce', name: 'Commerce & Management Studies', code: 'COM', type: 'PROGRAM_OFFERING', description: 'Degree-granting commerce department running B.Com and M.Com.', hod_email: 'hod.commerce@college.edu', is_active: true },
+    { id: 'dept_arabic', name: 'Department of Arabic', code: 'ARB', type: 'SUPPORTING', description: 'Supporting/Auxiliary language department offering Common Arabic and Open Electives to other degree programmes.', hod_email: 'hod.arabic@college.edu', is_active: true },
+    { id: 'dept_english', name: 'Department of English', code: 'ENG', type: 'SUPPORTING', description: 'Supporting humanities department providing English communication and literature across all degree programs.', hod_email: 'hod.english@college.edu', is_active: true },
+    { id: 'dept_maths', name: 'Department of Mathematics', code: 'MATH', type: 'SUPPORTING', description: 'Supporting allied science department providing complementary Mathematics and Statistics for Physics, Chemistry, and CS programs.', hod_email: 'hod.math@college.edu', is_active: true },
+    { id: 'dept_phy_ed', name: 'Department of Physical Education', code: 'PHY_ED', type: 'SUPPORTING', description: 'Supporting department managing campus athletics, sports quota evaluation, and fitness courses.', hod_email: 'sports@college.edu', is_active: true },
+  ],
+  academic_programs: [
+    { id: 'prog_bsc_bot', department_id: 'dept_botany', name: 'B.Sc Botany (Plant Science & Biotech)', code: 'BSC_BOT', level: 'UG', duration_years: 3, total_semesters: 6, intake_capacity: 48, is_active: true },
+    { id: 'prog_msc_bot', department_id: 'dept_botany', name: 'M.Sc Botany', code: 'MSC_BOT', level: 'PG', duration_years: 2, total_semesters: 4, intake_capacity: 18, is_active: true },
+    { id: 'prog_bsc_cs', department_id: 'dept_comp_sci', name: 'B.Sc Computer Science', code: 'BSC_CS', level: 'UG', duration_years: 3, total_semesters: 6, intake_capacity: 60, is_active: true },
+    { id: 'prog_msc_cs', department_id: 'dept_comp_sci', name: 'M.Sc Computer Science', code: 'MSC_CS', level: 'PG', duration_years: 2, total_semesters: 4, intake_capacity: 24, is_active: true },
+    { id: 'prog_bcom', department_id: 'dept_commerce', name: 'Bachelor of Commerce (B.Com)', code: 'BCOM', level: 'UG', duration_years: 3, total_semesters: 6, intake_capacity: 80, is_active: true },
+  ],
   users: [
     {
       id: 1,
@@ -1458,3 +1474,111 @@ export async function getStudentAcademicRecords(email) {
     (r) => r.student_email.toLowerCase() === cleanEmail
   );
 }
+
+export async function listAllDepartments() {
+  await initDb();
+  const sql = getSql();
+  if (sql) {
+    try {
+      const depts = await sql`
+        SELECT d.*, 
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'id', p.id,
+                'name', p.name,
+                'code', p.code,
+                'level', p.level,
+                'duration_years', p.duration_years,
+                'total_semesters', p.total_semesters,
+                'intake_capacity', p.intake_capacity,
+                'is_active', p.is_active
+              )
+            ) FILTER (WHERE p.id IS NOT NULL), '[]'
+          ) as programs
+        FROM departments d
+        LEFT JOIN academic_programs p ON d.id = p.department_id AND p.is_active = TRUE
+        GROUP BY d.id
+        ORDER BY d.type ASC, d.name ASC
+      `;
+      return depts;
+    } catch (err) {
+      console.error('listAllDepartments sql error:', err);
+    }
+  }
+
+  return memoryStore.departments.map((d) => {
+    const programs = memoryStore.academic_programs.filter((p) => p.department_id === d.id && p.is_active);
+    return { ...d, programs };
+  });
+}
+
+export async function createDepartment({ name, code, type, description, hod_email }) {
+  await initDb();
+  const sql = getSql();
+  const id = `dept_${code.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+
+  if (sql) {
+    try {
+      const rows = await sql`
+        INSERT INTO departments (id, name, code, type, description, hod_email, is_active)
+        VALUES (${id}, ${name}, ${code.toUpperCase()}, ${type || 'PROGRAM_OFFERING'}, ${description || ''}, ${hod_email || null}, TRUE)
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          type = EXCLUDED.type,
+          description = EXCLUDED.description,
+          hod_email = EXCLUDED.hod_email
+        RETURNING *;
+      `;
+      return rows[0];
+    } catch (err) {
+      console.error('createDepartment sql error:', err);
+      throw err;
+    }
+  }
+
+  const existingIdx = memoryStore.departments.findIndex((d) => d.id === id);
+  const newDept = { id, name, code: code.toUpperCase(), type: type || 'PROGRAM_OFFERING', description: description || '', hod_email: hod_email || null, is_active: true };
+  if (existingIdx >= 0) {
+    memoryStore.departments[existingIdx] = newDept;
+  } else {
+    memoryStore.departments.push(newDept);
+  }
+  return newDept;
+}
+
+export async function createAcademicProgram({ department_id, name, code, level, duration_years, total_semesters, intake_capacity }) {
+  await initDb();
+  const sql = getSql();
+  const id = `prog_${code.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+
+  if (sql) {
+    try {
+      const rows = await sql`
+        INSERT INTO academic_programs (id, department_id, name, code, level, duration_years, total_semesters, intake_capacity, is_active)
+        VALUES (${id}, ${department_id}, ${name}, ${code.toUpperCase()}, ${level || 'UG'}, ${duration_years || 3}, ${total_semesters || 6}, ${intake_capacity || 60}, TRUE)
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          level = EXCLUDED.level,
+          duration_years = EXCLUDED.duration_years,
+          total_semesters = EXCLUDED.total_semesters,
+          intake_capacity = EXCLUDED.intake_capacity
+        RETURNING *;
+      `;
+      return rows[0];
+    } catch (err) {
+      console.error('createAcademicProgram sql error:', err);
+      throw err;
+    }
+  }
+
+  const existingIdx = memoryStore.academic_programs.findIndex((p) => p.id === id);
+  const newProg = { id, department_id, name, code: code.toUpperCase(), level: level || 'UG', duration_years: duration_years || 3, total_semesters: total_semesters || 6, intake_capacity: intake_capacity || 60, is_active: true };
+  if (existingIdx >= 0) {
+    memoryStore.academic_programs[existingIdx] = newProg;
+  } else {
+    memoryStore.academic_programs.push(newProg);
+  }
+  return newProg;
+}
+

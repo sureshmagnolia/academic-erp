@@ -4696,3 +4696,340 @@ button, input, select, textarea {
   }
 }
 
+
+/* ==========================================================================
+   ACADEMIC DEPARTMENTS & PROGRAM MANAGEMENT STYLES
+   ========================================================================== */
+
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dept-header-card {
+  background: rgba(17, 24, 39, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.dept-header-info {
+  flex: 1;
+  min-width: 280px;
+}
+
+.dept-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-bottom: 0.4rem;
+}
+
+.dept-desc {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.btn-add-dept {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+}
+
+.btn-add-dept:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
+}
+
+.dept-filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.dept-filter-pill {
+  padding: 0.45rem 1rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dept-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+}
+
+.dept-filter-pill.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25));
+  border-color: rgba(168, 85, 247, 0.4);
+  color: #fff;
+}
+
+.departments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 1.5rem;
+}
+
+.dept-card {
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.dept-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.dept-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.dept-code-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.dept-type-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 9999px;
+}
+
+.dept-type-badge.offering {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.dept-type-badge.supporting {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.dept-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 0.35rem;
+}
+
+.dept-desc-text {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.45;
+  margin-bottom: 0.75rem;
+}
+
+.dept-hod-info {
+  font-size: 0.8rem;
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  background: rgba(10, 14, 23, 0.5);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.dept-programs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.programs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.programs-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.btn-add-prog-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #c7d2fe;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-add-prog-sm:hover {
+  background: rgba(99, 102, 241, 0.3);
+  color: #fff;
+}
+
+.programs-chips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.program-chip {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.prog-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.prog-level-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.prog-name-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.prog-meta-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.supporting-dept-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px dashed rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+}
+
+.supporting-dept-notice .notice-text strong {
+  display: block;
+  font-size: 0.8rem;
+  color: #fbbf24;
+  margin-bottom: 0.15rem;
+}
+
+.supporting-dept-notice .notice-text p {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-close-modal:hover {
+  color: #fff;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.btn-cancel {
+  padding: 0.65rem 1.2rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
