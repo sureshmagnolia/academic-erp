@@ -25,6 +25,16 @@ import {
 import { useState, useRef, useEffect } from 'react';
 import { MASTER_ROLES } from '@/lib/constants';
 
+const DEMO_ACCOUNTS = [
+  { role: 'ADMIN', name: 'Suresh (System Admin / Principal)', email: 'sureshmagnolia@gmail.com', tagClass: 'admin', tag: 'Principal' },
+  { role: 'HOD', name: 'Dr. Sarah Varma (HoD Botany)', email: 'hod.botany@college.edu', tagClass: 'hod', tag: 'HoD Botany' },
+  { role: 'HOD', name: 'Dr. Abdul Rahman (HoD Arabic)', email: 'hod.arabic@college.edu', tagClass: 'hod', tag: 'HoD Arabic' },
+  { role: 'FACULTY', name: 'Prof. Rajesh K (Plant Sciences)', email: 'faculty.botany@college.edu', tagClass: 'faculty', tag: 'Faculty' },
+  { role: 'STUDENT', name: 'Ananya Nair (B.Sc Botany FYUGP)', email: 'student.botany@college.edu', tagClass: 'student', tag: 'Student (FYUGP)' },
+  { role: 'RESEARCH_SCHOLAR', name: 'Vikram Aditya (PhD Scholar)', email: 'scholar.vikram@college.edu', tagClass: 'scholar', tag: 'PhD Scholar' },
+  { role: 'NON_TEACHING_STAFF', name: 'M. Vinod Kumar (Accounts Supdt)', email: 'staff.accounts@college.edu', tagClass: 'faculty', tag: 'Staff / Accounts' },
+];
+
 export default function Navbar() {
   const pathname = usePathname();
   const { data: session, status, update } = useSession();
@@ -200,6 +210,33 @@ export default function Navbar() {
                             ? 'Switch to any institutional role to preview its UI & actions:'
                             : 'Select your active operational role:'}
                         </span>
+                      </div>
+
+                      <div className="demo-account-switcher-section">
+                        <div className="demo-account-header">
+                          <Sparkles size={12} className="text-amber-400" />
+                          <span>TEST SUITE: PRE-FILLED DEMO ACCOUNTS</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '8px' }}>
+                          {DEMO_ACCOUNTS.map((acc) => {
+                            const isSelected = activeRole === acc.role;
+                            return (
+                              <button
+                                key={acc.email}
+                                onClick={() => handleSwitchRole(acc.role)}
+                                className={`demo-account-item ${isSelected ? 'selected' : ''}`}
+                                title={`Switch view to ${acc.name} (${acc.email})`}
+                                style={isSelected ? { background: 'rgba(99, 102, 241, 0.15)', borderLeft: '2px solid #818cf8' } : {}}
+                              >
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: 600, fontSize: '0.76rem', color: isSelected ? '#a5b4fc' : '#e2e8f0' }}>{acc.name}</span>
+                                  <span style={{ fontSize: '0.67rem', color: '#64748b' }}>{acc.email}</span>
+                                </div>
+                                <span className={`demo-role-tag ${acc.tagClass}`}>{acc.tag}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
                       <div className="dropdown-roles-list">

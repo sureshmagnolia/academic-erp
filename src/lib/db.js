@@ -139,6 +139,13 @@ const memoryStore = {
     { id: 5, user_email: 'hod.cse@college.edu', role_code: 'HOD', department: 'dept_comp_sci', is_active: true },
     { id: 6, user_email: 'hod.cse@college.edu', role_code: 'RESEARCH_SUPERVISOR', department: 'dept_comp_sci', is_active: true },
     { id: 7, user_email: 'scholar.vikram@college.edu', role_code: 'RESEARCH_SCHOLAR', department: 'dept_comp_sci', is_active: true },
+    { id: 8, user_email: 'hod.botany@college.edu', role_code: 'HOD', department: 'dept_botany', is_active: true },
+    { id: 9, user_email: 'hod.botany@college.edu', role_code: 'FACULTY', department: 'dept_botany', is_active: true },
+    { id: 10, user_email: 'hod.arabic@college.edu', role_code: 'HOD', department: 'dept_arabic', is_active: true },
+    { id: 11, user_email: 'hod.arabic@college.edu', role_code: 'FACULTY', department: 'dept_arabic', is_active: true },
+    { id: 12, user_email: 'faculty.botany@college.edu', role_code: 'FACULTY', department: 'dept_botany', is_active: true },
+    { id: 13, user_email: 'student.botany@college.edu', role_code: 'STUDENT', department: 'dept_botany', is_active: true },
+    { id: 14, user_email: 'staff.accounts@college.edu', role_code: 'NON_TEACHING_STAFF', department: 'dept_comp_sci', is_active: true },
   ],
   enrollment_tokens: [
     {

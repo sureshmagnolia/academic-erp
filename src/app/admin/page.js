@@ -777,7 +777,7 @@ export default function AdminPage() {
 
           {/* Add Department Modal */}
           {showAddDeptModal && (
-            <div className="modal-overlay">
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddDeptModal(false); }}>
               <div className="modal-card">
                 <div className="modal-header">
                   <div className="modal-title-row">

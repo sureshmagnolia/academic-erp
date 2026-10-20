@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import {
-  BookOpen, PlusCircle, Trash2, Layers, Tag, AlignLeft, Info,
+  BookOpen, PlusCircle, Trash2, Filter, RefreshCw, Layers, Tag, AlignLeft, Info,
   Users,
   CheckCircle,
   ShieldCheck,
@@ -43,6 +43,7 @@ export default function FacultyPage() {
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   const [courseFilterDept, setCourseFilterDept] = useState('ALL');
+  const filteredCourses = coursesList.filter((c) => courseFilterDept === 'ALL' || c.department_id === courseFilterDept);
 
   // New Course Form Fields
   const [newCourseCode, setNewCourseCode] = useState('');
@@ -525,6 +526,132 @@ export default function FacultyPage() {
       )}
 
       {/* ------------------------------------------------------------- */}
+      {/* ------------------------------------------------------------- */}
+      {/* TAB 2.5: PROGRAM COURSES & CURRICULUM MANAGEMENT              */}
+      {/* ------------------------------------------------------------- */}
+      {activeTab === 'courses' && (
+        <div className="tab-section-content">
+          <div className="admin-card">
+            <div className="card-header" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                <BookOpen size={24} className="card-icon text-indigo" />
+                <div>
+                  <h3 className="card-title">Program Courses & Curriculum Offerings</h3>
+                  <p className="card-desc">
+                    Undergraduate (4-Year FYUGP) & Postgraduate course registry. HoDs and Faculty members can register new courses, define credits, and attach courses to degree programs or supporting departments.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddCourseModal(true)}
+                className="btn-primary-action"
+                style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <PlusCircle size={16} /> Add Course to Program
+              </button>
+            </div>
+
+            {/* Filters Row */}
+            <div className="courses-filter-bar" style={{ display: 'flex', gap: '14px', margin: '20px 0', flexWrap: 'wrap', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Filter size={15} style={{ color: '#94a3b8' }} />
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8' }}>Filter by Department:</span>
+                <select
+                  value={courseFilterDept}
+                  onChange={(e) => setCourseFilterDept(e.target.value)}
+                  className="form-select"
+                  style={{ width: 'auto', padding: '6px 12px', fontSize: '0.82rem' }}
+                >
+                  <option value="ALL">All Departments ({departmentsList.length})</option>
+                  {departmentsList.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.type === 'SUPPORTING' ? 'Supporting' : 'Degree-Offering'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginLeft: 'auto', fontSize: '0.82rem', color: '#64748b' }}>
+                Showing <strong>{filteredCourses.length}</strong> of {coursesList.length} courses
+              </div>
+            </div>
+
+            {/* Courses Grid */}
+            {loadingCourses ? (
+              <div className="empty-state-box">
+                <RefreshCw size={28} className="spinner-icon text-indigo" />
+                <p>Loading course catalogue & syllabi...</p>
+              </div>
+            ) : filteredCourses.length === 0 ? (
+              <div className="empty-state-box">
+                <BookOpen size={36} style={{ color: '#64748b' }} />
+                <p>No courses found matching selected filters.</p>
+                <button onClick={() => setShowAddCourseModal(true)} className="btn-secondary-action" style={{ marginTop: '12px' }}>
+                  <PlusCircle size={15} /> Add First Course
+                </button>
+              </div>
+            ) : (
+              <div className="courses-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
+                {filteredCourses.map((crs) => {
+                  const dept = departmentsList.find((d) => d.id === crs.department_id);
+                  const prog = programsList.find((p) => p.id === crs.program_id);
+                  const isSupporting = dept?.type === 'SUPPORTING' || !crs.program_id;
+
+                  return (
+                    <div key={crs.id} className="course-card">
+                      <div className="course-card-top">
+                        <div className="course-badge-row">
+                          <span className="course-code-tag">{crs.code}</span>
+                          <span className={`course-type-pill ${(crs.course_type || 'CORE').toLowerCase()}`}>
+                            {crs.course_type || 'CORE'}
+                          </span>
+                          <span className="course-sem-pill">Sem {crs.semester || 1}</span>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteCourse(crs.id)}
+                          className="btn-delete-course"
+                          title="Remove Course from Curriculum"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+
+                      <h4 className="course-title">{crs.name}</h4>
+                      <p className="course-desc-text">{crs.description || 'No course syllabus overview provided.'}</p>
+
+                      <div className="course-meta-grid">
+                        <div className="course-meta-item">
+                          <span className="meta-lbl">Department:</span>
+                          <span className="meta-val">{dept?.name || crs.department_id}</span>
+                        </div>
+                        <div className="course-meta-item">
+                          <span className="meta-lbl">Program:</span>
+                          <span className="meta-val highlight">
+                            {prog ? prog.name : isSupporting ? 'Supporting / Multi-Program Elective' : 'Autonomous Offering'}
+                          </span>
+                        </div>
+                        <div className="course-meta-item">
+                          <span className="meta-lbl">Credits & Hours:</span>
+                          <span className="meta-val">
+                            <strong>{crs.credits || 3}</strong> Credits &bull; {crs.hours_per_week || 4} Hrs/Week
+                          </span>
+                        </div>
+                        {crs.faculty_email && (
+                          <div className="course-meta-item">
+                            <span className="meta-lbl">Course In-Charge:</span>
+                            <span className="meta-val">{crs.faculty_email}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* TAB 3: ATTENDANCE */}
       {/* ------------------------------------------------------------- */}
       {activeTab === 'attendance' && (
@@ -630,6 +757,166 @@ export default function FacultyPage() {
                 <Save size={16} /> Save Internal Marks
               </button>
             </div>
+          </div>
+        </div>
+      )}
+        
+      {/* ------------------------------------------------------------- */}
+      {/* FLOATING POPUP MODAL: ADD COURSE TO PROGRAM                  */}
+      {/* ------------------------------------------------------------- */}
+      {showAddCourseModal && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAddCourseModal(false);
+          }}
+        >
+          <div className="modal-card">
+            <div className="modal-header">
+              <div className="modal-title-row">
+                <BookOpen size={20} className="text-indigo" />
+                <h3>Add Course to Academic Curriculum</h3>
+              </div>
+              <button onClick={() => setShowAddCourseModal(false)} className="btn-close-modal">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCourse} className="admin-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Course Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. BOT1B01, ARB1A07, CS1B01"
+                    value={newCourseCode}
+                    onChange={(e) => setNewCourseCode(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Course Type *</label>
+                  <select
+                    value={newCourseType}
+                    onChange={(e) => setNewCourseType(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="CORE">Core Course (Discipline Major)</option>
+                    <option value="COMMON">Common Course (Language / Communication)</option>
+                    <option value="COMPLEMENTARY">Complementary / Allied Minor</option>
+                    <option value="OPEN_ELECTIVE">Open Elective (Inter-Disciplinary)</option>
+                    <option value="VALUE_ADDED">Value-Added / Skill Course</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Course Title / Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Angiosperm Anatomy and Microtechnique"
+                  value={newCourseName}
+                  onChange={(e) => setNewCourseName(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Offering Department *</label>
+                  <select
+                    value={newCourseDept}
+                    onChange={(e) => setNewCourseDept(e.target.value)}
+                    className="form-select"
+                    required
+                  >
+                    {departmentsList.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.type === 'SUPPORTING' ? 'Supporting' : 'Degree-Offering'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Target Academic Program</label>
+                  <select
+                    value={newCourseProg}
+                    onChange={(e) => setNewCourseProg(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="">None (Common / Supporting across all programs)</option>
+                    {programsList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.level})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Semester (1 - 8)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="8"
+                    value={newCourseSem}
+                    onChange={(e) => setNewCourseSem(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Credits</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="8"
+                    value={newCourseCredits}
+                    onChange={(e) => setNewCourseCredits(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Hours / Week</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={newCourseHours}
+                    onChange={(e) => setNewCourseHours(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Course Description / Syllabus Overview</label>
+                <textarea
+                  rows="3"
+                  placeholder="Outline unit modules, practical lab requirements, learning outcomes..."
+                  value={newCourseDesc}
+                  onChange={(e) => setNewCourseDesc(e.target.value)}
+                  className="form-textarea"
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCourseModal(false)}
+                  className="btn-cancel"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary-action">
+                  Register Course in Program
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
