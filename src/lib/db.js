@@ -349,7 +349,8 @@ export async function initDb() {
     `;
 
     await sql`
-      CREATE TABLE IF NOT EXISTS user_profiles (
+      ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS cap_id VARCHAR(50);
+    CREATE TABLE IF NOT EXISTS user_profiles (
         id SERIAL PRIMARY KEY,
         user_email VARCHAR(255) UNIQUE NOT NULL,
         role_code VARCHAR(50) NOT NULL,
@@ -992,24 +993,26 @@ export async function saveUserProfile(email, data, isSubmitting = false) {
         admission_or_emp_no, aadhaar_last4, qualifying_exam, qualifying_percentage,
         qualifying_year, campus_preference, bus_required, bus_stop, linkedin_url,
         github_url, scholar_url, document_proof_url, profile_status,
-        submitted_at, updated_at
-      )
-      VALUES (
-        ${cleanEmail}, ${data.role_code || 'STUDENT'}, ${data.full_name || ''},
-        ${data.dob || null}, ${data.gender || null}, ${data.blood_group || null},
-        ${data.marital_status || null}, ${data.religion || null}, ${data.community_category || null},
-        ${data.caste_name || null}, ${JSON.stringify(data.reservations || [])}, ${cleanEmail},
-        ${data.alternate_email || null}, ${data.mobile_number || null},
-        ${data.emergency_contact_name || null}, ${data.emergency_contact_phone || null},
-        ${data.permanent_address || null}, ${data.permanent_state || null},
-        ${data.permanent_district || null}, ${data.permanent_pincode || null},
-        ${data.admission_or_emp_no || null}, ${data.aadhaar_last4 || null},
-        ${data.qualifying_exam || null}, ${data.qualifying_percentage || null},
-        ${data.qualifying_year || null}, ${data.campus_preference || null},
-        ${Boolean(data.bus_required)}, ${data.bus_stop || null},
-        ${data.linkedin_url || null}, ${data.github_url || null},
-        ${data.scholar_url || null}, ${data.document_proof_url || null},
-        ${newStatus}, ${isSubmitting ? new Date().toISOString() : null}, CURRENT_TIMESTAMP
+        cap_id, department_id, program_id, program_level, second_language,
+        admission_quota, is_open_category, index_mark, parent_name, parent_mobile,
+        actual_category, family_status, annual_income, previous_institution,
+        tc_no, tc_date, conduct_status, pwd_category, co_curricular_category,
+        ncc_certificate_level, is_ex_servicemen_ward, has_arts_festival_grade,
+        sports_quota_level, documents
+      ) VALUES (
+        ${cleanEmail}, ${data.role_code || 'STUDENT'}, ${data.full_name || ''}, ${data.dob || null}, ${data.gender || null}, ${data.blood_group || null}, ${data.marital_status || 'Single'},
+        ${data.religion || null}, ${data.community_category || null}, ${data.caste_name || null}, ${JSON.stringify(data.reservations || [])}::jsonb, ${cleanEmail},
+        ${data.alternate_email || null}, ${data.mobile_number || null}, ${data.emergency_contact_name || data.parent_name || null}, ${data.emergency_contact_phone || data.parent_mobile || null},
+        ${data.permanent_address || null}, ${data.permanent_state || null}, ${data.permanent_district || null}, ${data.permanent_pincode || null},
+        ${data.admission_or_emp_no || data.cap_id || null}, ${data.aadhaar_last4 || null}, ${data.qualifying_exam || null}, ${data.qualifying_percentage || null},
+        ${data.qualifying_year || null}, ${data.campus_preference || 'DAY_SCHOLAR'}, ${Boolean(data.bus_required)}, ${data.bus_stop || null}, ${data.linkedin_url || null},
+        ${data.github_url || null}, ${data.scholar_url || null}, ${data.document_proof_url || null}, ${newStatus},
+        ${data.cap_id || null}, ${data.department_id || null}, ${data.program_id || null}, ${data.program_level || null}, ${data.second_language || null},
+        ${data.admission_quota || null}, ${Boolean(data.is_open_category)}, ${data.index_mark || null}, ${data.parent_name || null}, ${data.parent_mobile || null},
+        ${data.actual_category || null}, ${data.family_status || null}, ${data.annual_income || null}, ${data.previous_institution || null},
+        ${data.tc_no || null}, ${data.tc_date || null}, ${data.conduct_status || null}, ${data.pwd_category || null}, ${data.co_curricular_category || null},
+        ${data.ncc_certificate_level || null}, ${Boolean(data.is_ex_servicemen_ward)}, ${Boolean(data.has_arts_festival_grade)},
+        ${data.sports_quota_level || null}, ${JSON.stringify(data.documents || {})}::jsonb
       )
       ON CONFLICT (user_email) DO UPDATE
       SET full_name = COALESCE(EXCLUDED.full_name, user_profiles.full_name),
@@ -1035,12 +1038,36 @@ export async function saveUserProfile(email, data, isSubmitting = false) {
           qualifying_percentage = COALESCE(EXCLUDED.qualifying_percentage, user_profiles.qualifying_percentage),
           qualifying_year = COALESCE(EXCLUDED.qualifying_year, user_profiles.qualifying_year),
           campus_preference = COALESCE(EXCLUDED.campus_preference, user_profiles.campus_preference),
-          bus_required = EXCLUDED.bus_required,
-          bus_stop = EXCLUDED.bus_stop,
+          bus_required = COALESCE(EXCLUDED.bus_required, user_profiles.bus_required),
+          bus_stop = COALESCE(EXCLUDED.bus_stop, user_profiles.bus_stop),
           linkedin_url = COALESCE(EXCLUDED.linkedin_url, user_profiles.linkedin_url),
           github_url = COALESCE(EXCLUDED.github_url, user_profiles.github_url),
           scholar_url = COALESCE(EXCLUDED.scholar_url, user_profiles.scholar_url),
           document_proof_url = COALESCE(EXCLUDED.document_proof_url, user_profiles.document_proof_url),
+          cap_id = COALESCE(EXCLUDED.cap_id, user_profiles.cap_id),
+          department_id = COALESCE(EXCLUDED.department_id, user_profiles.department_id),
+          program_id = COALESCE(EXCLUDED.program_id, user_profiles.program_id),
+          program_level = COALESCE(EXCLUDED.program_level, user_profiles.program_level),
+          second_language = COALESCE(EXCLUDED.second_language, user_profiles.second_language),
+          admission_quota = COALESCE(EXCLUDED.admission_quota, user_profiles.admission_quota),
+          is_open_category = COALESCE(EXCLUDED.is_open_category, user_profiles.is_open_category),
+          index_mark = COALESCE(EXCLUDED.index_mark, user_profiles.index_mark),
+          parent_name = COALESCE(EXCLUDED.parent_name, user_profiles.parent_name),
+          parent_mobile = COALESCE(EXCLUDED.parent_mobile, user_profiles.parent_mobile),
+          actual_category = COALESCE(EXCLUDED.actual_category, user_profiles.actual_category),
+          family_status = COALESCE(EXCLUDED.family_status, user_profiles.family_status),
+          annual_income = COALESCE(EXCLUDED.annual_income, user_profiles.annual_income),
+          previous_institution = COALESCE(EXCLUDED.previous_institution, user_profiles.previous_institution),
+          tc_no = COALESCE(EXCLUDED.tc_no, user_profiles.tc_no),
+          tc_date = COALESCE(EXCLUDED.tc_date, user_profiles.tc_date),
+          conduct_status = COALESCE(EXCLUDED.conduct_status, user_profiles.conduct_status),
+          pwd_category = COALESCE(EXCLUDED.pwd_category, user_profiles.pwd_category),
+          co_curricular_category = COALESCE(EXCLUDED.co_curricular_category, user_profiles.co_curricular_category),
+          ncc_certificate_level = COALESCE(EXCLUDED.ncc_certificate_level, user_profiles.ncc_certificate_level),
+          is_ex_servicemen_ward = COALESCE(EXCLUDED.is_ex_servicemen_ward, user_profiles.is_ex_servicemen_ward),
+          has_arts_festival_grade = COALESCE(EXCLUDED.has_arts_festival_grade, user_profiles.has_arts_festival_grade),
+          sports_quota_level = COALESCE(EXCLUDED.sports_quota_level, user_profiles.sports_quota_level),
+          documents = COALESCE(EXCLUDED.documents, user_profiles.documents),
           profile_status = ${newStatus},
           submitted_at = CASE WHEN ${isSubmitting} THEN CURRENT_TIMESTAMP ELSE user_profiles.submitted_at END,
           updated_at = CURRENT_TIMESTAMP
@@ -1055,7 +1082,7 @@ export async function saveUserProfile(email, data, isSubmitting = false) {
     ...data,
     user_email: cleanEmail,
     profile_status: newStatus,
-    submitted_at: isSubmitting ? new Date().toISOString() : null,
+    submitted_at: isSubmitting ? new Date().toISOString() : (memoryStore.user_profiles[existingIdx]?.submitted_at || null),
     updated_at: new Date().toISOString(),
   };
 
