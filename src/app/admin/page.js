@@ -70,6 +70,7 @@ export default function AdminPage() {
   // 4. Existing State (Roles, Users, Announcements)
   const [usersList, setUsersList] = useState([]);
   const [students, setStudents] = useState([]);
+  const [scholars, setScholars] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -129,6 +130,10 @@ export default function AdminPage() {
       const resAnn = await fetch('/api/admin/announcements');
       const dataAnn = await resAnn.json();
       if (dataAnn.announcements) setAnnouncements(dataAnn.announcements);
+
+      const resScholars = await fetch('/api/admin/scholars');
+      const dataScholars = await resScholars.json();
+      if (dataScholars.scholars) setScholars(dataScholars.scholars);
     } catch (err) {
       setErrorMsg('Failed to load administrative governance data.');
     } finally {
