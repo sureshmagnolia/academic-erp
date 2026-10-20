@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Academic ERP & Student Management Portal
 
-## Getting Started
+A modern, serverless Academic ERP built with **Next.js (App Router)**, **NextAuth (Auth.js v5)**, and **PostgreSQL (Vercel Postgres / Neon)**, ready for 1-click deployment on **Vercel**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Key Features
+
+* **Google OAuth 2.0 Login**: Passwordless, fast authentication using students' existing Google/Gmail accounts.
+* **Strict Student Whitelist (Accepted List)**:
+  * Administrators can add student Gmail accounts, student IDs, and department details.
+  * When a student signs in via Google, the system checks whether their Gmail is in the database.
+  * If enrolled: Access granted to the Student Portal.
+  * If NOT enrolled: Access is denied and user is directed to the registration instructions page.
+* **Administrator Console (`/admin`)**:
+  * Enroll new student Gmail IDs individually.
+  * Search, filter by department, and view enrolled students.
+  * Instant status toggle (`ACTIVE` / `SUSPENDED`).
+  * Remove students from the accepted list.
+  * Broadcast college announcements and notices.
+* **Student Portal (`/student`)**:
+  * Attendance tracker with exam eligibility indicators.
+  * Academic marks, credits, and grades breakdown.
+  * College notice board and department updates.
+* **Vercel-Optimized**: Designed for zero-config deployment on Vercel with serverless PostgreSQL. Includes automatic table creation and fallback data store for local development.
+
+---
+
+## Architecture Flow
+
+```
+1. Admin enters student Gmail in /admin -> Saved in `allowed_students` PostgreSQL table
+2. Student clicks "Sign in with Google" -> Authenticates with Google OAuth
+3. NextAuth `signIn` callback queries database:
+   ├── Admin Gmail?  ──> Granted ADMIN role -> Redirect to /admin
+   ├── In Whitelist? ──> Granted STUDENT role -> Redirect to /student
+   └── Not in list?  ──> Denied -> Redirect to /unauthorized (Contact Admin)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploying to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Step 1: Push Code to GitHub
+Push this repository to your GitHub account (`https://github.com/sureshmagnolia/academic-erp`).
 
-## Learn More
+### Step 2: Import Project in Vercel
+1. Log in to [Vercel](https://vercel.com/).
+2. Click **"Add New..."** > **Project**.
+3. Select `academic-erp` from your GitHub repositories and click **Import**.
 
-To learn more about Next.js, take a look at the following resources:
+### Step 3: Add Database (Vercel Postgres / Neon)
+1. In your Vercel Project dashboard, go to the **Storage** tab.
+2. Click **Create Database** > Choose **Postgres** (or Neon from Marketplace).
+3. Click **Connect to Project**. Vercel will automatically inject `POSTGRES_URL` into your environment variables!
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Step 4: Configure Environment Variables
+In Vercel > **Settings** > **Environment Variables**, add:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Description | Example |
+| :--- | :--- | :--- |
+| `AUTH_SECRET` | 32+ character random secret | `openssl rand -base64 32` |
+| `AUTH_GOOGLE_ID` | OAuth Client ID from Google Cloud | `xxx.apps.googleusercontent.com` |
+| `AUTH_GOOGLE_SECRET` | OAuth Client Secret from Google Cloud | `GOCSPX-xxxx` |
+| `ADMIN_EMAILS` | Comma-separated admin Gmails | `sureshmagnolia@gmail.com` |
 
-## Deploy on Vercel
+*(Note: `POSTGRES_URL` is already injected when you connect Vercel Postgres).*
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Step 5: Update Google Cloud Redirect URI
+In [Google Cloud Console](https://console.cloud.google.com/) > **APIs & Services** > **Credentials** > Your Web Client:
+* Under **Authorized redirect URIs**, add:
+  ```
+  https://your-project-name.vercel.app/api/auth/callback/google
+  ```
+* Under **Audience**, click **Publish App** to allow any student Gmail to log in.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Local Development
+
+1. **Clone & Install**:
+   ```bash
+   git clone https://github.com/sureshmagnolia/academic-erp.git
+   cd academic-erp
+   npm install
+   ```
+
+2. **Configure Local Environment**:
+   Copy `.env.example` to `.env.local`:
+   ```bash
+   cp .env.example .env.local
+   ```
+   *(The app includes a built-in local store so you can start testing immediately without needing a local PostgreSQL server).*
+
+3. **Run Dev Server**:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+4. **Production Build Check**:
+   ```bash
+   npm run build
+   ```
+
+---
+
+## License
+MIT License. Created for College Academic Management & ERP deployments.
