@@ -349,8 +349,7 @@ export async function initDb() {
     `;
 
     await sql`
-      ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS cap_id VARCHAR(50);
-    CREATE TABLE IF NOT EXISTS user_profiles (
+      CREATE TABLE IF NOT EXISTS user_profiles (
         id SERIAL PRIMARY KEY,
         user_email VARCHAR(255) UNIQUE NOT NULL,
         role_code VARCHAR(50) NOT NULL,
@@ -389,10 +388,69 @@ export async function initDb() {
         approved_at TIMESTAMP WITH TIME ZONE,
         approved_by VARCHAR(255),
         reviewer_notes TEXT,
+        cap_id VARCHAR(50),
+        department_id VARCHAR(100),
+        program_id VARCHAR(100),
+        program_level VARCHAR(20),
+        second_language VARCHAR(50),
+        admission_quota VARCHAR(100),
+        is_open_category BOOLEAN DEFAULT FALSE,
+        index_mark NUMERIC(8, 2),
+        parent_name VARCHAR(255),
+        parent_mobile VARCHAR(50),
+        actual_category VARCHAR(100),
+        family_status VARCHAR(50),
+        annual_income NUMERIC(12, 2),
+        previous_institution VARCHAR(255),
+        tc_no VARCHAR(100),
+        tc_date DATE,
+        conduct_status VARCHAR(100),
+        pwd_category VARCHAR(255),
+        co_curricular_category VARCHAR(100),
+        ncc_certificate_level VARCHAR(50),
+        is_ex_servicemen_ward BOOLEAN DEFAULT FALSE,
+        has_arts_festival_grade BOOLEAN DEFAULT FALSE,
+        sports_quota_level VARCHAR(100),
+        documents JSONB DEFAULT '{}'::jsonb,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
+
+    const extraCols = [
+      'cap_id VARCHAR(50)',
+      'department_id VARCHAR(100)',
+      'program_id VARCHAR(100)',
+      'program_level VARCHAR(20)',
+      'second_language VARCHAR(50)',
+      'admission_quota VARCHAR(100)',
+      'is_open_category BOOLEAN DEFAULT FALSE',
+      'index_mark NUMERIC(8, 2)',
+      'parent_name VARCHAR(255)',
+      'parent_mobile VARCHAR(50)',
+      'actual_category VARCHAR(100)',
+      'family_status VARCHAR(50)',
+      'annual_income NUMERIC(12, 2)',
+      'previous_institution VARCHAR(255)',
+      'tc_no VARCHAR(100)',
+      'tc_date DATE',
+      'conduct_status VARCHAR(100)',
+      'pwd_category VARCHAR(255)',
+      'co_curricular_category VARCHAR(100)',
+      'ncc_certificate_level VARCHAR(50)',
+      'is_ex_servicemen_ward BOOLEAN DEFAULT FALSE',
+      'has_arts_festival_grade BOOLEAN DEFAULT FALSE',
+      'sports_quota_level VARCHAR(100)',
+      "documents JSONB DEFAULT '{}'::jsonb"
+    ];
+
+    for (const col of extraCols) {
+      try {
+        await sql(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS ${col};`);
+      } catch (err) {
+        // Safe fallback if column exists
+      }
+    }
 
     await sql`
       CREATE TABLE IF NOT EXISTS data_change_requests (
