@@ -316,56 +316,118 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="admin-nav-tabs">
-        <button
-          onClick={() => setActiveAdminTab('qr_enrollment')}
-          className={`admin-tab-btn ${activeAdminTab === 'qr_enrollment' ? 'active' : ''}`}
-        >
-          <QrCode size={16} />
-          <span>QR & Link Activation Hub ({tokens.length})</span>
-        </button>
+      {/* Side Panel Dashboard Layout */}
+      <div className="admin-sidepanel-layout">
+        <aside className="admin-sidebar-nav">
+          <div className="sidebar-group-title">GOVERNANCE MODULES</div>
+          <div className="sidebar-nav-list">
+            <button
+              onClick={() => setActiveAdminTab('qr_enrollment')}
+              className={`sidebar-nav-item ${activeAdminTab === 'qr_enrollment' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <QrCode size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">QR & Link Hub</span>
+                <span className="sidebar-item-desc">Onboarding tokens</span>
+              </div>
+              <span className="sidebar-item-badge">{tokens.length}</span>
+            </button>
 
-        <button
-          onClick={() => setActiveAdminTab('join_requests')}
-          className={`admin-tab-btn ${activeAdminTab === 'join_requests' ? 'active' : ''}`}
-        >
-          <UserPlus size={16} />
-          <span>Join Requests ({joinRequests.length})</span>
-        </button>
+            <button
+              onClick={() => setActiveAdminTab('join_requests')}
+              className={`sidebar-nav-item ${activeAdminTab === 'join_requests' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <UserPlus size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Join Requests</span>
+                <span className="sidebar-item-desc">Candidate verification</span>
+              </div>
+              <span className={`sidebar-item-badge ${joinRequests.length > 0 ? 'highlight' : ''}`}>
+                {joinRequests.length}
+              </span>
+            </button>
 
-        <button
-          onClick={() => setActiveAdminTab('change_requests')}
-          className={`admin-tab-btn ${activeAdminTab === 'change_requests' ? 'active' : ''}`}
-        >
-          <FileEdit size={16} />
-          <span>Data Change Requests ({changeRequests.length})</span>
-        </button>
+            <button
+              onClick={() => setActiveAdminTab('change_requests')}
+              className={`sidebar-nav-item ${activeAdminTab === 'change_requests' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <FileEdit size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Change Requests</span>
+                <span className="sidebar-item-desc">Maker-checker edits</span>
+              </div>
+              <span className={`sidebar-item-badge ${changeRequests.length > 0 ? 'highlight-amber' : ''}`}>
+                {changeRequests.length}
+              </span>
+            </button>
 
-        <button
-          onClick={() => setActiveAdminTab('roles')}
-          className={`admin-tab-btn ${activeAdminTab === 'roles' ? 'active' : ''}`}
-        >
-          <Briefcase size={16} />
-          <span>Roles & Scopes</span>
-        </button>
+            <button
+              onClick={() => setActiveAdminTab('roles')}
+              className={`sidebar-nav-item ${activeAdminTab === 'roles' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <Briefcase size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Roles & Scopes</span>
+                <span className="sidebar-item-desc">Multi-role privileges</span>
+              </div>
+              <span className="sidebar-item-badge">{allUsers.length}</span>
+            </button>
 
-        <button
-          onClick={() => setActiveAdminTab('scholars')}
-          className={`admin-tab-btn ${activeAdminTab === 'scholars' ? 'active' : ''}`}
-        >
-          <Microscope size={16} />
-          <span>Research Scholars</span>
-        </button>
+            <button
+              onClick={() => setActiveAdminTab('scholars')}
+              className={`sidebar-nav-item ${activeAdminTab === 'scholars' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <Microscope size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Research Scholars</span>
+                <span className="sidebar-item-desc">PhD & supervisor link</span>
+              </div>
+              <span className="sidebar-item-badge">{scholars.length}</span>
+            </button>
 
-        <button
-          onClick={() => setActiveAdminTab('announcements')}
-          className={`admin-tab-btn ${activeAdminTab === 'announcements' ? 'active' : ''}`}
-        >
-          <Bell size={16} />
-          <span>Circulars</span>
-        </button>
-      </div>
+            <button
+              onClick={() => setActiveAdminTab('announcements')}
+              className={`sidebar-nav-item ${activeAdminTab === 'announcements' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <Bell size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Circulars</span>
+                <span className="sidebar-item-desc">Campus notices</span>
+              </div>
+              <span className="sidebar-item-badge">{announcements.length}</span>
+            </button>
+          </div>
+
+          <div className="sidebar-status-card">
+            <span className="status-kicker">GOVERNANCE PILLARS</span>
+            <div className="pillar-item">
+              <ShieldCheck size={14} className="pillar-icon" />
+              <span>Ask Once Master</span>
+            </div>
+            <div className="pillar-item">
+              <UserCheck size={14} className="pillar-icon" />
+              <span>Maker-Checker Approval</span>
+            </div>
+            <div className="pillar-item">
+              <Sparkles size={14} className="pillar-icon" />
+              <span>Admin God Mode</span>
+            </div>
+          </div>
+        </aside>
+
+        <main className="admin-sidepanel-content">
 
       {/* ------------------------------------------------------------- */}
       {/* TAB 1: DYNAMIC QR & LINK ENROLLMENT HUB */}
@@ -811,6 +873,8 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+        </main>
+      </div>
     </div>
   );
 }

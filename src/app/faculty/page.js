@@ -177,40 +177,84 @@ export default function FacultyPage() {
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="admin-nav-tabs">
-        <button
-          onClick={() => setActiveTab('join_requests')}
-          className={`admin-tab-btn ${activeTab === 'join_requests' ? 'active' : ''}`}
-        >
-          <UserPlus size={16} />
-          <span>Department Join Requests ({joinRequests.length})</span>
-        </button>
+      {/* Side Panel Dashboard Layout */}
+      <div className="admin-sidepanel-layout">
+        <aside className="admin-sidebar-nav">
+          <div className="sidebar-group-title">DEPARTMENT MODULES</div>
+          <div className="sidebar-nav-list">
+            <button
+              onClick={() => setActiveTab('join_requests')}
+              className={`sidebar-nav-item ${activeTab === 'join_requests' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <UserPlus size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Join Requests</span>
+                <span className="sidebar-item-desc">Verify candidates</span>
+              </div>
+              <span className={`sidebar-item-badge ${joinRequests.length > 0 ? 'highlight' : ''}`}>
+                {joinRequests.length}
+              </span>
+            </button>
 
-        <button
-          onClick={() => setActiveTab('change_requests')}
-          className={`admin-tab-btn ${activeTab === 'change_requests' ? 'active' : ''}`}
-        >
-          <FileEdit size={16} />
-          <span>Student Data Change Requests ({changeRequests.length})</span>
-        </button>
+            <button
+              onClick={() => setActiveTab('change_requests')}
+              className={`sidebar-nav-item ${activeTab === 'change_requests' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <FileEdit size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Change Requests</span>
+                <span className="sidebar-item-desc">Review student edits</span>
+              </div>
+              <span className={`sidebar-item-badge ${changeRequests.length > 0 ? 'highlight-amber' : ''}`}>
+                {changeRequests.length}
+              </span>
+            </button>
 
-        <button
-          onClick={() => setActiveTab('attendance')}
-          className={`admin-tab-btn ${activeTab === 'attendance' ? 'active' : ''}`}
-        >
-          <Calendar size={16} />
-          <span>Class Attendance</span>
-        </button>
+            <button
+              onClick={() => setActiveTab('attendance')}
+              className={`sidebar-nav-item ${activeTab === 'attendance' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <Calendar size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Class Attendance</span>
+                <span className="sidebar-item-desc">Daily roll call</span>
+              </div>
+            </button>
 
-        <button
-          onClick={() => setActiveTab('marks')}
-          className={`admin-tab-btn ${activeTab === 'marks' ? 'active' : ''}`}
-        >
-          <Award size={16} />
-          <span>Internal Assessment Marks</span>
-        </button>
-      </div>
+            <button
+              onClick={() => setActiveTab('marks')}
+              className={`sidebar-nav-item ${activeTab === 'marks' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <Award size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Assessment Marks</span>
+                <span className="sidebar-item-desc">Internal marks sign-off</span>
+              </div>
+            </button>
+          </div>
+
+          <div className="sidebar-status-card">
+            <span className="status-kicker">SUPERIOR ACCESS</span>
+            <div className="pillar-item">
+              <ShieldCheck size={14} className="pillar-icon" />
+              <span>Department Verification Authority</span>
+            </div>
+            <div className="pillar-item">
+              <CheckCircle size={14} className="pillar-icon" />
+              <span>Maker-Checker Approval Mode</span>
+            </div>
+          </div>
+        </aside>
+
+        <main className="admin-sidepanel-content">
 
       {/* ------------------------------------------------------------- */}
       {/* TAB 1: DEPARTMENT JOIN REQUESTS */}
@@ -471,6 +515,8 @@ export default function FacultyPage() {
           </div>
         </div>
       )}
+        </main>
+      </div>
     </div>
   );
 }
