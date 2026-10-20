@@ -204,7 +204,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             assignedRoles = [{ code: 'STUDENT', name: 'Student', category: 'LEARNER' }];
           }
 
-          token.roles = assignedRoles;
+          // Deduplicate roles to ensure each role only appears once
+          const seenJwt = new Set();
+          const uniqueJwtRoles = [];
+          for (const r of assignedRoles) {
+            const code = typeof r === 'string' ? r : r.code;
+            const dept = typeof r === 'object' ? (r.department || '') : '';
+            const key = `${code}_${dept}`;
+            if (!seenJwt.has(key)) {
+              seenJwt.add(key);
+              uniqueJwtRoles.push(r);
+            }
+          }
+          token.roles = uniqueJwtRoles;
           if (!token.activeRole) {
             token.activeRole = determineActiveRole(assignedRoles);
             token.role = token.activeRole;
