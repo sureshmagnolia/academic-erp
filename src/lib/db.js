@@ -446,10 +446,39 @@ export async function initDb() {
       ON CONFLICT (email) DO NOTHING;
     `;
 
+    // 1. Database cleanup to remove all duplicate user_roles
+    try {
+      await sql`
+        DELETE FROM user_roles
+        WHERE id NOT IN (
+          SELECT MIN(id)
+          FROM user_roles
+          GROUP BY LOWER(user_email), role_code, COALESCE(department, ''), COALESCE(scope_entity_id, '')
+        );
+      `;
+    } catch (cleanErr) {
+      console.warn('user_roles cleanup notice:', cleanErr.message);
+    }
+
+    // 2. Enforce composite unique index so duplicates cannot occur
+    try {
+      await sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_user_roles_composite
+        ON user_roles (LOWER(user_email), role_code, COALESCE(department, ''), COALESCE(scope_entity_id, ''));
+      `;
+    } catch (idxErr) {
+      console.warn('uq_user_roles_composite notice:', idxErr.message);
+    }
+
+    // 3. Strictly idempotent admin role seed
     await sql`
       INSERT INTO user_roles (user_email, role_code, department, is_active)
-      VALUES ('sureshmagnolia@gmail.com', 'ADMIN', 'Administration', TRUE)
-      ON CONFLICT DO NOTHING;
+      SELECT 'sureshmagnolia@gmail.com', 'ADMIN', 'Administration', TRUE
+      WHERE NOT EXISTS (
+        SELECT 1 FROM user_roles 
+        WHERE LOWER(user_email) = 'sureshmagnolia@gmail.com' 
+        AND role_code = 'ADMIN'
+      );
     `;
 
     isInitialized = true;

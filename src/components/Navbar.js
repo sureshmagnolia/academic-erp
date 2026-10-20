@@ -42,7 +42,19 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const roles = session?.user?.roles || [];
+  // Client-side deduplication safeguard for existing session cookies
+  const rawRoles = session?.user?.roles || [];
+  const seenRaw = new Set();
+  const roles = [];
+  for (const r of rawRoles) {
+    const code = typeof r === 'string' ? r : r.code;
+    const dept = typeof r === 'object' && r.department ? r.department : '';
+    const key = `${code}_${dept}`;
+    if (!seenRaw.has(key)) {
+      seenRaw.add(key);
+      roles.push(r);
+    }
+  }
   const roleCodes = roles.map((r) => (typeof r === 'string' ? r : r.code));
   const isSuperAdmin = roleCodes.includes('ADMIN');
   const activeRole = session?.user?.activeRole || session?.user?.role || (isSuperAdmin ? 'ADMIN' : 'STUDENT');

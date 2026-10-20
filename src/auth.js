@@ -232,7 +232,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.roles = token.roles || [{ code: 'STUDENT', name: 'Student' }];
+        // Strict deduplication of session roles to instantly cleanse existing client cookies
+        const seen = new Set();
+        const unique = [];
+        for (const r of (token.roles || [])) {
+          const code = typeof r === 'string' ? r : r.code;
+          const dept = typeof r === 'object' ? (r.department || '') : '';
+          const key = `${code}_${dept}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(r);
+          }
+        }
+        session.user.roles = unique.length > 0 ? unique : [{ code: 'STUDENT', name: 'Student' }];
         session.user.activeRole = token.activeRole || 'STUDENT';
         session.user.role = token.activeRole || 'STUDENT';
         session.user.profile = token.userProfile || null;
