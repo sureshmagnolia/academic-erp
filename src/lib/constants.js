@@ -2,8 +2,7 @@ import { neon } from '@neondatabase/serverless';
 
 export const MASTER_ROLES = [
   { code: 'PRINCIPAL', name: 'Principal / Director', category: 'EXECUTIVE', description: 'Institutional executive oversight, high-level approvals, and campus-wide governance.' },
-  { code: 'DEAN', name: 'Dean (Academic / Research / Student Affairs)', category: 'EXECUTIVE', description: 'Oversight across college-wide academic curricula, research grants, and student affairs.' },
-  { code: 'HOD', name: 'Head of Department (HoD)', category: 'ACADEMIC_ADMIN', description: 'Departmental leadership, faculty subject allocations, syllabus review, and internal marks sign-off.' },
+  { code: 'HOD', name: 'Head of Department (HoD / Faculty Head)', category: 'ACADEMIC_ADMIN', description: 'Departmental leadership, faculty subject allocations, syllabus review, and internal marks sign-off.' },
   { code: 'FACULTY', name: 'Faculty (Teaching Staff)', category: 'ACADEMIC', description: 'Curriculum delivery, student attendance marking, internal evaluations, and mentoring.' },
   { code: 'RESEARCH_SUPERVISOR', name: 'PhD / Research Supervisor', category: 'RESEARCH', description: 'Supervises doctoral and master research scholars, doctoral committee meetings, and thesis reviews.' },
   { code: 'RESEARCH_SCHOLAR', name: 'Research Scholar (PhD / M.Phil)', category: 'STUDENT_RESEARCH', description: 'Postgraduate research scholar with elevated research privileges, lab access, and stipend tracking.' },

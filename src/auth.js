@@ -25,7 +25,6 @@ if (!process.env.AUTH_TRUST_HOST) {
 const ROLE_PRIORITY = [
   'ADMIN',
   'PRINCIPAL',
-  'DEAN',
   'HOD',
   'CHIEF_SUPERINTENDENT',
   'WARDEN',
