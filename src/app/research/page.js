@@ -18,14 +18,25 @@ import {
 } from 'lucide-react';
 
 export default function ResearchPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [scholars, setScholars] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const roles = session?.user?.roles?.map((r) => (typeof r === 'string' ? r : r.code)) || [];
+  const rawRoles = session?.user?.roles || [];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.code));
   const activeRole = session?.user?.activeRole || session?.user?.role || 'STUDENT';
-  const isSupervisor = activeRole === 'RESEARCH_SUPERVISOR' || roles.includes('RESEARCH_SUPERVISOR') || roles.includes('ADMIN');
-  const isScholar = activeRole === 'RESEARCH_SCHOLAR' || roles.includes('RESEARCH_SCHOLAR');
+  const isSuperAdmin = roles.includes('ADMIN') || session?.user?.role === 'ADMIN' || session?.user?.email === 'sureshmagnolia@gmail.com';
+  const isSimulatingRole = isSuperAdmin && activeRole !== 'ADMIN';
+
+  const isSupervisor = isSimulatingRole
+    ? (activeRole === 'RESEARCH_SUPERVISOR')
+    : (activeRole === 'RESEARCH_SUPERVISOR' || roles.includes('RESEARCH_SUPERVISOR') || roles.includes('ADMIN') || isSuperAdmin);
+
+  const isScholar = isSimulatingRole
+    ? (activeRole === 'RESEARCH_SCHOLAR')
+    : (activeRole === 'RESEARCH_SCHOLAR' || roles.includes('RESEARCH_SCHOLAR'));
+
+  const canAccessResearch = isSupervisor || isScholar;
 
   useEffect(() => {
     fetch('/api/admin/scholars')
@@ -39,6 +50,41 @@ export default function ResearchPage() {
 
   if (status === 'loading' || loading) {
     return <div className="student-loading-container"><div className="spinner"></div><p>Loading Research Management Portal...</p></div>;
+  }
+
+  if (!canAccessResearch) {
+    if (isSimulatingRole) {
+      return (
+        <div className="admin-access-denied god-mode-isolated">
+          <div className="simulation-isolation-card">
+            <div className="simulation-isolation-badge">
+              <Microscope size={18} />
+              <span>GOD MODE ISOLATION: {activeRole}</span>
+            </div>
+            <h2>Research Portal Restricted</h2>
+            <p>
+              You are currently simulating the <strong>{activeRole}</strong> role in God Mode. The Research Scholars & Supervisors Portal is hidden to simulate the authentic {activeRole} view.
+            </p>
+            <div className="isolation-action-btns">
+              <Link href={activeRole === 'STUDENT' ? '/student' : activeRole === 'FACULTY' || activeRole === 'HOD' ? '/faculty' : '/'} className="btn btn-primary">
+                Return to {activeRole} Portal
+              </Link>
+              <button onClick={() => update({ activeRole: 'RESEARCH_SUPERVISOR' })} className="btn btn-secondary">
+                Switch Simulated Role to Research Supervisor
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="admin-access-denied">
+        <Microscope size={56} className="denied-icon" />
+        <h2>Research Management Portal</h2>
+        <p>This workspace is restricted to Research Scholars and Research Supervisors.</p>
+        <Link href="/" className="btn btn-primary">Return to Portal Home</Link>
+      </div>
+    );
   }
 
   return (

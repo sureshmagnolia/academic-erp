@@ -1,7 +1,23 @@
 import { neon } from '@neondatabase/serverless';
-import { MASTER_ROLES, DEPARTMENTS_CATALOG, FORM_REFERENCE_DATA, SEAT_RESERVATION_CATEGORIES } from './constants.js';
+import {
+  MASTER_ROLES,
+  DEPARTMENTS_CATALOG,
+  FORM_REFERENCE_DATA,
+  SEAT_RESERVATION_CATEGORIES,
+  SYSTEM_PRIVILEGES,
+  ROLE_DEFAULT_PRIVILEGES,
+  computeEffectivePrivileges,
+} from './constants.js';
 
-export { MASTER_ROLES, DEPARTMENTS_CATALOG, FORM_REFERENCE_DATA, SEAT_RESERVATION_CATEGORIES };
+export {
+  MASTER_ROLES,
+  DEPARTMENTS_CATALOG,
+  FORM_REFERENCE_DATA,
+  SEAT_RESERVATION_CATEGORIES,
+  SYSTEM_PRIVILEGES,
+  ROLE_DEFAULT_PRIVILEGES,
+  computeEffectivePrivileges,
+};
 
 // In-Memory fallback store for environments without live Postgres credentials
 const memoryStore = {
@@ -311,6 +327,152 @@ const memoryStore = {
       approved_at: new Date(Date.now() - 86400000 * 29).toISOString(),
       approved_by: 'sureshmagnolia@gmail.com',
       reviewer_notes: 'All certificates and qualifying marks verified against physical originals.',
+      verification_stage: 'COMPLETED',
+      official_admission_no: 'ADM/2024/CS/001',
+    },
+    {
+      id: 2,
+      user_email: 'fathima.botany@gmail.com',
+      role_code: 'STUDENT',
+      full_name: 'Fathima Zahra',
+      dob: '2005-04-18',
+      gender: 'Female',
+      blood_group: 'O+',
+      religion: 'Muslim',
+      community_category: 'OBC',
+      caste_name: 'Mappila',
+      admission_quota: 'Muslim Quota',
+      cap_id: 'CAP2026-BOT-8821',
+      department_id: 'dept_botany',
+      program_id: 'prog_bsc_bot',
+      mobile_number: '9847123456',
+      parent_name: 'Abdul Kareem',
+      parent_mobile: '9847100000',
+      permanent_address: 'Zahra Manzil, Chittur Road',
+      permanent_district: 'Palakkad',
+      permanent_state: 'Kerala',
+      permanent_pincode: '678001',
+      qualifying_exam: 'Higher Secondary / Plus Two (State Board)',
+      qualifying_percentage: 92.5,
+      qualifying_year: 2026,
+      family_status: 'BPL (Below Poverty Line)',
+      annual_income: 60000,
+      profile_status: 'SUBMITTED_FOR_VERIFICATION',
+      verification_stage: 'DEPT_LEVEL',
+      submitted_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+    },
+    {
+      id: 3,
+      user_email: 'ananthu.cs@gmail.com',
+      role_code: 'STUDENT',
+      full_name: 'Ananthu Krishna',
+      dob: '2005-08-22',
+      gender: 'Male',
+      blood_group: 'A+',
+      religion: 'Hindu',
+      community_category: 'SC',
+      caste_name: 'Cheramar',
+      admission_quota: 'SC Quota',
+      cap_id: 'CAP2026-CS-4109',
+      department_id: 'dept_comp_sci',
+      program_id: 'prog_bsc_cs',
+      mobile_number: '9895112233',
+      parent_name: 'Krishnan K',
+      parent_mobile: '9895100000',
+      permanent_address: 'Krishna Vilas, Koduvayur',
+      permanent_district: 'Palakkad',
+      permanent_state: 'Kerala',
+      permanent_pincode: '678501',
+      qualifying_exam: 'Higher Secondary / Plus Two (State Board)',
+      qualifying_percentage: 88.0,
+      qualifying_year: 2026,
+      family_status: 'BPL (Below Poverty Line)',
+      annual_income: 48000,
+      profile_status: 'IN_VERIFICATION',
+      verification_stage: 'NODAL_DESK',
+      dept_verified_by: 'hod.cse@college.edu',
+      dept_verified_at: new Date(Date.now() - 3600000 * 5).toISOString(),
+      dept_notes: 'Qualifying marks and community certificate verified against physical originals.',
+      submitted_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+    },
+    {
+      id: 4,
+      user_email: 'diya.com@gmail.com',
+      role_code: 'STUDENT',
+      full_name: 'Diya Rachel George',
+      dob: '2005-02-10',
+      gender: 'Female',
+      blood_group: 'AB+',
+      religion: 'Christian',
+      community_category: 'General',
+      caste_name: 'Orthodox',
+      admission_quota: 'General Merit / Open Quota',
+      cap_id: 'CAP2026-COM-1205',
+      department_id: 'dept_commerce',
+      program_id: 'prog_bcom',
+      mobile_number: '9744556677',
+      parent_name: 'George Varghese',
+      parent_mobile: '9744500000',
+      permanent_address: 'Bethel Gardens, Fort Maidan',
+      permanent_district: 'Palakkad',
+      permanent_state: 'Kerala',
+      permanent_pincode: '678001',
+      qualifying_exam: 'Higher Secondary / Plus Two (State Board)',
+      qualifying_percentage: 96.4,
+      qualifying_year: 2026,
+      family_status: 'APL (Above Poverty Line)',
+      annual_income: 360000,
+      profile_status: 'IN_VERIFICATION',
+      verification_stage: 'PTA_DESK',
+      dept_verified_by: 'hod.commerce@college.edu',
+      dept_verified_at: new Date(Date.now() - 3600000 * 8).toISOString(),
+      dept_notes: 'Eligible under B.Com merit index ranking.',
+      nodal_verified_by: 'nodal.officer@college.edu',
+      nodal_verified_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+      nodal_notes: 'Allotment memo validated against university central portal.',
+      submitted_at: new Date(Date.now() - 3600000 * 28).toISOString(),
+    },
+    {
+      id: 5,
+      user_email: 'siddharth.botany@gmail.com',
+      role_code: 'STUDENT',
+      full_name: 'Siddharth Menon',
+      dob: '2005-11-05',
+      gender: 'Male',
+      blood_group: 'B+',
+      religion: 'Hindu',
+      community_category: 'General',
+      caste_name: 'Nair',
+      admission_quota: 'General Merit / Open Quota',
+      cap_id: 'CAP2026-BOT-3301',
+      department_id: 'dept_botany',
+      program_id: 'prog_bsc_bot',
+      mobile_number: '9447889900',
+      parent_name: 'Rajan Menon',
+      parent_mobile: '9447800000',
+      permanent_address: 'Sreevalsam, Kalpathy Heritage Village',
+      permanent_district: 'Palakkad',
+      permanent_state: 'Kerala',
+      permanent_pincode: '678003',
+      qualifying_exam: 'Higher Secondary / Plus Two (State Board)',
+      qualifying_percentage: 95.8,
+      qualifying_year: 2026,
+      family_status: 'APL (Above Poverty Line)',
+      annual_income: 420000,
+      profile_status: 'IN_VERIFICATION',
+      verification_stage: 'PRINCIPAL_DESK',
+      dept_verified_by: 'hod.botany@college.edu',
+      dept_verified_at: new Date(Date.now() - 3600000 * 10).toISOString(),
+      dept_notes: 'Department admission committee cleared candidate.',
+      nodal_verified_by: 'nodal.officer@college.edu',
+      nodal_verified_at: new Date(Date.now() - 3600000 * 6).toISOString(),
+      nodal_notes: 'Nodal desk verified.',
+      pta_verified_by: 'pta.cashier@college.edu',
+      pta_verified_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+      pta_receipt_no: 'PTA-2026-0492',
+      pta_amount: 1850,
+      pta_notes: 'PTA fund and caution deposit received in full.',
+      submitted_at: new Date(Date.now() - 3600000 * 30).toISOString(),
     },
   ],
   data_change_requests: [
@@ -699,6 +861,33 @@ export async function initDb() {
 
     try {
       await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS seat_matrix JSONB DEFAULT '{}'::jsonb;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS verification_stage VARCHAR(50) DEFAULT 'DEPT_LEVEL';`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS dept_verified_by VARCHAR(255);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS dept_verified_at TIMESTAMP WITH TIME ZONE;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS dept_notes TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS nodal_verified_by VARCHAR(255);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS nodal_verified_at TIMESTAMP WITH TIME ZONE;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS nodal_notes TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS pta_verified_by VARCHAR(255);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS pta_verified_at TIMESTAMP WITH TIME ZONE;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS pta_receipt_no VARCHAR(100);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS pta_amount NUMERIC(10, 2);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS pta_notes TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS principal_approved_by VARCHAR(255);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS principal_approved_at TIMESTAMP WITH TIME ZONE;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS principal_notes TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS official_admission_no VARCHAR(100);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS tc_issued_by VARCHAR(255);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS tc_issued_at TIMESTAMP WITH TIME ZONE;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS tc_serial_no VARCHAR(100);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS tc_reason TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS alumni_current_status TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS alumni_organization TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS alumni_higher_studies TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS alumni_city TEXT;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS alumni_updated_at TIMESTAMP WITH TIME ZONE;`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS granted_privileges JSONB DEFAULT '[]'::jsonb;`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS revoked_privileges JSONB DEFAULT '[]'::jsonb;`;
     } catch (colErr) {
       // Safe fallback if column exists
     }
@@ -784,7 +973,20 @@ export async function listAllUsers() {
         GROUP BY u.id
         ORDER BY u.created_at DESC
       `;
-      return users;
+      return users.map((u) => {
+        const rawRoles = Array.isArray(u.roles) ? u.roles : [];
+        return {
+          ...u,
+          roles: rawRoles,
+          granted_privileges: u.granted_privileges || [],
+          revoked_privileges: u.revoked_privileges || [],
+          effective_privileges: computeEffectivePrivileges(
+            rawRoles,
+            u.granted_privileges || [],
+            u.revoked_privileges || []
+          ),
+        };
+      });
     } catch (err) {
       console.error('DB query error listAllUsers:', err);
     }
@@ -800,7 +1002,17 @@ export async function listAllUsers() {
         scope_entity_id: ur.scope_entity_id,
         is_active: ur.is_active,
       }));
-    return { ...u, roles };
+    return {
+      ...u,
+      roles,
+      granted_privileges: u.granted_privileges || [],
+      revoked_privileges: u.revoked_privileges || [],
+      effective_privileges: computeEffectivePrivileges(
+        roles,
+        u.granted_privileges || [],
+        u.revoked_privileges || []
+      ),
+    };
   });
 }
 
@@ -918,6 +1130,29 @@ export async function removeRoleFromUser(email, role_code, scope_entity_id) {
     if (scope_entity_id && ur.scope_entity_id !== scope_entity_id) return true;
     return false;
   });
+  return true;
+}
+
+export async function updateUserPrivileges({ email, granted_privileges = [], revoked_privileges = [] }) {
+  const cleanEmail = email.trim().toLowerCase();
+  await initDb();
+  const sql = getSql();
+
+  if (sql) {
+    await sql`
+      UPDATE users 
+      SET granted_privileges = ${JSON.stringify(granted_privileges)}::jsonb,
+          revoked_privileges = ${JSON.stringify(revoked_privileges)}::jsonb
+      WHERE LOWER(email) = ${cleanEmail};
+    `;
+    return true;
+  }
+
+  const u = memoryStore.users.find((x) => x.email.toLowerCase() === cleanEmail);
+  if (u) {
+    u.granted_privileges = granted_privileges;
+    u.revoked_privileges = revoked_privileges;
+  }
   return true;
 }
 
@@ -2133,4 +2368,339 @@ export async function updateProgramSeatMatrix(programId, splitup = {}, updatedBy
   }
 
   return await getProgramSeatMatrix(programId);
+}
+
+// -------------------------------------------------------------
+// MULTI-STEP STUDENT ADMISSION VERIFICATION PIPELINE
+// -------------------------------------------------------------
+
+export async function listAdmissionDossiers({ stage = 'ALL', department_id = null, status = null, search = '' } = {}) {
+  await initDb();
+  const sql = getSql();
+
+  if (sql) {
+    try {
+      let query = sql`
+        SELECT p.*, d.name as department_name, pr.name as program_name, pr.code as program_code
+        FROM user_profiles p
+        LEFT JOIN departments d ON p.department_id = d.id
+        LEFT JOIN academic_programs pr ON p.program_id = pr.id
+        WHERE p.role_code = 'STUDENT'
+      `;
+
+      const rows = await query;
+      let filtered = rows;
+      if (stage && stage !== 'ALL') {
+        filtered = filtered.filter(r => r.verification_stage === stage);
+      }
+      if (department_id) {
+        filtered = filtered.filter(r => r.department_id === department_id);
+      }
+      if (status) {
+        filtered = filtered.filter(r => r.profile_status === status);
+      }
+      if (search) {
+        const s = search.toLowerCase();
+        filtered = filtered.filter(r => 
+          (r.full_name && r.full_name.toLowerCase().includes(s)) ||
+          (r.user_email && r.user_email.toLowerCase().includes(s)) ||
+          (r.cap_id && r.cap_id.toLowerCase().includes(s)) ||
+          (r.official_admission_no && r.official_admission_no.toLowerCase().includes(s))
+        );
+      }
+      return filtered;
+    } catch (err) {
+      console.error('listAdmissionDossiers sql error:', err);
+    }
+  }
+
+  // Memory fallback
+  return (memoryStore.user_profiles || []).filter(p => {
+    if (p.role_code !== 'STUDENT') return false;
+    if (stage && stage !== 'ALL' && p.verification_stage !== stage) return false;
+    if (department_id && p.department_id !== department_id) return false;
+    if (status && p.profile_status !== status) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      const match = 
+        (p.full_name && p.full_name.toLowerCase().includes(s)) ||
+        (p.user_email && p.user_email.toLowerCase().includes(s)) ||
+        (p.cap_id && p.cap_id.toLowerCase().includes(s)) ||
+        (p.official_admission_no && p.official_admission_no.toLowerCase().includes(s));
+      if (!match) return false;
+    }
+    return true;
+  }).map(p => {
+    const dept = (memoryStore.departments || []).find(d => d.id === p.department_id);
+    const prog = (memoryStore.academic_programs || []).find(pr => pr.id === p.program_id);
+    return {
+      ...p,
+      department_name: dept?.name || p.department_id,
+      program_name: prog?.name || p.program_id,
+      program_code: prog?.code || '',
+    };
+  });
+}
+
+export async function processAdmissionVerificationStep({
+  email,
+  step,
+  action, // 'APPROVE' or 'REVISE'
+  verified_by,
+  notes = '',
+  pta_receipt_no = '',
+  pta_amount = 0,
+  official_admission_no = ''
+}) {
+  const cleanEmail = email.trim().toLowerCase();
+  await initDb();
+  const sql = getSql();
+  const now = new Date().toISOString();
+
+  let nextStage = 'DEPT_LEVEL';
+  let nextStatus = 'IN_VERIFICATION';
+
+  if (action === 'REVISE') {
+    nextStatus = 'CORRECTION_REQUIRED';
+  } else {
+    // Stage Transitions:
+    // Step 1 (DEPT) -> Step 2 (NODAL_DESK)
+    // Step 2 (NODAL) -> Step 3 (PTA_DESK)
+    // Step 3 (PTA) -> Step 4 (PRINCIPAL_DESK)
+    // Step 4 (PRINCIPAL) -> COMPLETED & official_admission_no
+    if (step === 1 || step === 'DEPT_LEVEL') {
+      nextStage = 'NODAL_DESK';
+      nextStatus = 'IN_VERIFICATION';
+    } else if (step === 2 || step === 'NODAL_DESK') {
+      nextStage = 'PTA_DESK';
+      nextStatus = 'IN_VERIFICATION';
+    } else if (step === 3 || step === 'PTA_DESK') {
+      nextStage = 'PRINCIPAL_DESK';
+      nextStatus = 'IN_VERIFICATION';
+    } else if (step === 4 || step === 'PRINCIPAL_DESK') {
+      nextStage = 'COMPLETED';
+      nextStatus = 'ADMITTED_ACTIVE';
+    }
+  }
+
+  if (sql) {
+    try {
+      if (step === 1 || step === 'DEPT_LEVEL') {
+        const rows = await sql`
+          UPDATE user_profiles
+          SET verification_stage = ${nextStage},
+              profile_status = ${nextStatus},
+              dept_verified_by = ${verified_by},
+              dept_verified_at = CURRENT_TIMESTAMP,
+              dept_notes = ${notes},
+              updated_at = CURRENT_TIMESTAMP
+          WHERE LOWER(user_email) = ${cleanEmail}
+          RETURNING *;
+        `;
+        return rows[0];
+      } else if (step === 2 || step === 'NODAL_DESK') {
+        const rows = await sql`
+          UPDATE user_profiles
+          SET verification_stage = ${nextStage},
+              profile_status = ${nextStatus},
+              nodal_verified_by = ${verified_by},
+              nodal_verified_at = CURRENT_TIMESTAMP,
+              nodal_notes = ${notes},
+              updated_at = CURRENT_TIMESTAMP
+          WHERE LOWER(user_email) = ${cleanEmail}
+          RETURNING *;
+        `;
+        return rows[0];
+      } else if (step === 3 || step === 'PTA_DESK') {
+        const rows = await sql`
+          UPDATE user_profiles
+          SET verification_stage = ${nextStage},
+              profile_status = ${nextStatus},
+              pta_verified_by = ${verified_by},
+              pta_verified_at = CURRENT_TIMESTAMP,
+              pta_receipt_no = ${pta_receipt_no},
+              pta_amount = ${pta_amount ? parseFloat(pta_amount) : 0},
+              pta_notes = ${notes},
+              updated_at = CURRENT_TIMESTAMP
+          WHERE LOWER(user_email) = ${cleanEmail}
+          RETURNING *;
+        `;
+        return rows[0];
+      } else if (step === 4 || step === 'PRINCIPAL_DESK') {
+        const finalAdmissionNo = official_admission_no.trim() || `ADM-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const rows = await sql`
+          UPDATE user_profiles
+          SET verification_stage = 'COMPLETED',
+              profile_status = 'ADMITTED_ACTIVE',
+              principal_approved_by = ${verified_by},
+              principal_approved_at = CURRENT_TIMESTAMP,
+              principal_notes = ${notes},
+              official_admission_no = ${finalAdmissionNo},
+              admission_or_emp_no = ${finalAdmissionNo},
+              approved_by = ${verified_by},
+              approved_at = CURRENT_TIMESTAMP,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE LOWER(user_email) = ${cleanEmail}
+          RETURNING *;
+        `;
+        // Also update users table roll_no to official admission no
+        await sql`
+          UPDATE users
+          SET roll_no = ${finalAdmissionNo},
+              status = 'ACTIVE'
+          WHERE LOWER(email) = ${cleanEmail};
+        `;
+        return rows[0];
+      }
+    } catch (err) {
+      console.error('processAdmissionVerificationStep sql error:', err);
+    }
+  }
+
+  // Memory fallback
+  const prof = (memoryStore.user_profiles || []).find(p => p.user_email.toLowerCase() === cleanEmail);
+  if (prof) {
+    prof.verification_stage = nextStage;
+    prof.profile_status = nextStatus;
+    prof.updated_at = now;
+
+    if (step === 1 || step === 'DEPT_LEVEL') {
+      prof.dept_verified_by = verified_by;
+      prof.dept_verified_at = now;
+      prof.dept_notes = notes;
+    } else if (step === 2 || step === 'NODAL_DESK') {
+      prof.nodal_verified_by = verified_by;
+      prof.nodal_verified_at = now;
+      prof.nodal_notes = notes;
+    } else if (step === 3 || step === 'PTA_DESK') {
+      prof.pta_verified_by = verified_by;
+      prof.pta_verified_at = now;
+      prof.pta_receipt_no = pta_receipt_no;
+      prof.pta_amount = pta_amount;
+      prof.pta_notes = notes;
+    } else if (step === 4 || step === 'PRINCIPAL_DESK') {
+      const finalAdmissionNo = official_admission_no.trim() || `ADM-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      prof.principal_approved_by = verified_by;
+      prof.principal_approved_at = now;
+      prof.principal_notes = notes;
+      prof.official_admission_no = finalAdmissionNo;
+      prof.admission_or_emp_no = finalAdmissionNo;
+      prof.approved_by = verified_by;
+      prof.approved_at = now;
+
+      // Update user in memoryStore.users
+      const u = (memoryStore.users || []).find(user => user.email.toLowerCase() === cleanEmail);
+      if (u) {
+        u.roll_no = finalAdmissionNo;
+        u.status = 'ACTIVE';
+      }
+    }
+  }
+  return prof;
+}
+
+export async function issueStudentTransferCertificate({
+  email,
+  issued_by,
+  tc_serial_no,
+  reason = 'Course Completed / Relieved upon request'
+}) {
+  const cleanEmail = email.trim().toLowerCase();
+  await initDb();
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const tcNumber = tc_serial_no.trim() || `TC/${new Date().getFullYear()}/${Math.floor(100 + Math.random() * 900)}`;
+
+  if (sql) {
+    try {
+      const rows = await sql`
+        UPDATE user_profiles
+        SET profile_status = 'TC_ISSUED',
+            verification_stage = 'TC_ISSUED',
+            tc_issued_by = ${issued_by},
+            tc_issued_at = CURRENT_TIMESTAMP,
+            tc_serial_no = ${tcNumber},
+            tc_reason = ${reason},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE LOWER(user_email) = ${cleanEmail}
+        RETURNING *;
+      `;
+
+      // Update user role to ALUMNI
+      await sql`
+        INSERT INTO user_roles (user_email, role_code, department, is_active)
+        VALUES (${cleanEmail}, 'ALUMNI', (SELECT department_id FROM user_profiles WHERE LOWER(user_email) = ${cleanEmail}), TRUE)
+        ON CONFLICT DO NOTHING;
+      `;
+
+      return rows[0];
+    } catch (err) {
+      console.error('issueStudentTransferCertificate sql error:', err);
+    }
+  }
+
+  // Memory fallback
+  const prof = (memoryStore.user_profiles || []).find(p => p.user_email.toLowerCase() === cleanEmail);
+  if (prof) {
+    prof.profile_status = 'TC_ISSUED';
+    prof.verification_stage = 'TC_ISSUED';
+    prof.tc_issued_by = issued_by;
+    prof.tc_issued_at = now;
+    prof.tc_serial_no = tcNumber;
+    prof.tc_reason = reason;
+    prof.updated_at = now;
+
+    // Add role in memoryStore
+    memoryStore.user_roles.push({
+      id: Date.now(),
+      user_email: cleanEmail,
+      role_code: 'ALUMNI',
+      department: prof.department_id,
+      is_active: true
+    });
+  }
+  return prof;
+}
+
+export async function updateAlumniProfile({
+  email,
+  current_status,
+  organization,
+  higher_studies,
+  city
+}) {
+  const cleanEmail = email.trim().toLowerCase();
+  await initDb();
+  const sql = getSql();
+  const now = new Date().toISOString();
+
+  if (sql) {
+    try {
+      const rows = await sql`
+        UPDATE user_profiles
+        SET alumni_current_status = ${current_status},
+            alumni_organization = ${organization},
+            alumni_higher_studies = ${higher_studies},
+            alumni_city = ${city},
+            alumni_updated_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE LOWER(user_email) = ${cleanEmail}
+        RETURNING *;
+      `;
+      return rows[0];
+    } catch (err) {
+      console.error('updateAlumniProfile sql error:', err);
+    }
+  }
+
+  // Memory fallback
+  const prof = (memoryStore.user_profiles || []).find(p => p.user_email.toLowerCase() === cleanEmail);
+  if (prof) {
+    prof.alumni_current_status = current_status;
+    prof.alumni_organization = organization;
+    prof.alumni_higher_studies = higher_studies;
+    prof.alumni_city = city;
+    prof.alumni_updated_at = now;
+  }
+  return prof;
 }

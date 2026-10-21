@@ -11,6 +11,9 @@ export const MASTER_ROLES = [
   { code: 'WARDEN', name: 'Hostel Warden', category: 'CAMPUS_LIFE', description: 'Hostel room allocations, leave/night out-pass approvals, discipline, and mess administration.' },
   { code: 'CHIEF_SUPERINTENDENT', name: 'Chief Superintendent (Exams)', category: 'EXAMINATION', description: 'End-semester and university exam operations, invigilation duty roster, and hall administration.' },
   { code: 'CLUB_COORDINATOR', name: 'Club / Activity Coordinator', category: 'CAMPUS_LIFE', description: 'Student clubs, technical chapters, cultural societies, and extra-curricular budget tracking.' },
+  { code: 'ADMISSION_NODAL_OFFICER', name: 'Admission Nodal Officer (Central Desk)', category: 'ADMISSION', description: 'Centralized quota verification, index marks audit, and institutional admission desk sign-off.' },
+  { code: 'PTA_OFFICIAL', name: 'PTA Official / Accounts Cashier', category: 'FINANCE', description: 'Verification of Parent-Teacher Association (PTA) fund remittance and fee payment receipts.' },
+  { code: 'ALUMNI', name: 'Alumni / Transferred Student', category: 'ALUMNI', description: 'Former student with issued Transfer Certificate (TC), limited access to transcripts, and alumni profile updates.' },
   { code: 'ADMIN', name: 'System Administrator', category: 'SYSTEM', description: 'Complete system control, role assignments, database maintenance, and security auditing.' },
 ];
 
@@ -246,4 +249,310 @@ export const SEAT_RESERVATION_CATEGORIES = [
     defaultPct: 0,
   },
 ];
+
+// -------------------------------------------------------------
+// STUDENT MULTI-STEP ADMISSION VERIFICATION PIPELINE
+// -------------------------------------------------------------
+export const ADMISSION_VERIFICATION_STAGES = [
+  {
+    step: 1,
+    stage: 'DEPT_LEVEL',
+    code: 'DEPT_VERIFIED',
+    title: 'Department Level Verification',
+    roleRequired: ['HOD', 'FACULTY', 'ADMIN'],
+    officerTitle: 'Department Faculty Advisor / Class Tutor / HoD',
+    desc: 'Verification of qualifying mark sheets, subject eligibility, qualifying exam percentage, and community/caste proof.',
+  },
+  {
+    step: 2,
+    stage: 'NODAL_DESK',
+    code: 'NODAL_VERIFIED',
+    title: 'Admission Nodal Desk Verification',
+    roleRequired: ['ADMISSION_NODAL_OFFICER', 'ADMIN', 'PRINCIPAL'],
+    officerTitle: 'Admission Nodal Officer (Central Desk)',
+    desc: 'Verification of University CAP Allotment Memo, normalized merit index score, affirmative reservation quotas, and fee waivers.',
+  },
+  {
+    step: 3,
+    stage: 'PTA_DESK',
+    code: 'PTA_VERIFIED',
+    title: 'PTA Fees Remittance Verification',
+    roleRequired: ['PTA_OFFICIAL', 'ADMIN', 'PRINCIPAL'],
+    officerTitle: 'PTA Official / Accounts Cashier',
+    desc: 'Verification of Parent-Teacher Association (PTA) fund remittance, caution deposit, and issuance of PTA payment receipt.',
+  },
+  {
+    step: 4,
+    stage: 'PRINCIPAL_DESK',
+    code: 'ADMITTED_ACTIVE',
+    title: 'Principal Office Approval & Admission Number',
+    roleRequired: ['PRINCIPAL', 'ADMIN'],
+    officerTitle: 'Office of the Principal',
+    desc: 'Final executive authorization. Generates and awards the official permanent Admission Number, granting full active student rights.',
+  },
+];
+
+// -------------------------------------------------------------
+// 204 REAL-WORLD COMMUNITIES / CASTES MASTER DICTIONARY
+// (Extracted & Normalized from Necttos Institutional Repository)
+// -------------------------------------------------------------
+export const COMMUNITIES_CATALOG = {
+  GENERAL: [
+    'Brahmin', 'Gupta', 'Guptan', 'Gupthan', 'Jacobite', 'Mannadiar', 'Mannadiyar',
+    'Marar', 'Marthoma', 'Menon', 'Moothan', 'Nair', 'Nambiar', 'Orthodox',
+    'Palliya', 'Pathukudy', 'Pattukudi', 'Pillai', 'Pisharody', 'Poduval',
+    'Roman Catholic', 'Saiva Pillai', 'Samantha', 'Syrian Catholic',
+    'Syro Malabar Catholic', 'Chaldean Syrian Christian', 'CSI Christian',
+    'Tharakan', 'Varma', 'Warrier', 'Other Forward Community'
+  ],
+  ETB: [
+    'Ezhava', 'Thiyya', 'Billava', 'Thiyyar'
+  ],
+  MU: [
+    'Mappila', 'Muslim', 'Mopila', 'Rawther', 'Ravuthar', 'Rowthar'
+  ],
+  LC: [
+    'Latin Catholic', 'Anglo Indian'
+  ],
+  OBH: [
+    'Asari', 'Boyan', 'Chetty', 'Devanga', 'Ezhuthachan', 'Kaikolan', 'Kammala',
+    'Karuvan', 'Kerala Mudali', 'Kerala Mudalis', 'Kollan', 'Kongu Vellala Gounder',
+    'Maniyani', 'Marathi', 'Maravan', 'Maravar', 'Maruthuvar', 'Moosari', 'Muthuraja',
+    'Nadar (Hindu)', 'Nagarthar', 'Naicker', 'Naidu', 'Padayachi Gounder',
+    'Padayachi Gownder', 'Padyachi (villayankuppam)', 'Payayachi', 'Perumkollan',
+    'Piramalakallar', 'Sadhu Chetty', 'Saiva Vella', 'Saiva Vellala', 'Saliya',
+    'Telugu Chetty', 'Thandan', 'Thattan', 'Vadugar', 'Vaduka', 'Vadukan',
+    'Vaniya', 'Veenasaiva', 'Veerasaiva', 'Vellala', 'Veluthedan',
+    'Vilakkathala Nair', 'Vilakkthala Nair', 'Viswakarma', 'Other Backward Hindu'
+  ],
+  OBX: [
+    'SIUC', 'Nadar (Christian)', 'Other Backward Christian'
+  ],
+  OEC: [
+    'Arayan', 'Chemmar', 'Dheevara', 'Kudumbi', 'Kulalan', 'Kumbaran', 'Kumbharan',
+    'Kusavan', 'Virasaiva', 'Wayanadan Chetty', 'Other Eligible Community'
+  ],
+  SC: [
+    'Arunthathiyar', 'Chakkamar', 'Chakkiliyan', 'Chakliya', 'Chemman', 'Cheramar',
+    'Cheruman', 'Gosangi', 'Kakkalan', 'Kalladi', 'Kanakkan', 'Kavara', 'Kurava',
+    'Mannan', 'Nayadi', 'Padanna', 'Padannan', 'Pallan', 'Palleyan', 'Panan',
+    'Paravan', 'Paraya', 'Parayan', 'Perumannan', 'Pulaya', 'Pulayan', 'Pulayar',
+    'Pulluvan', 'Sambava', 'Sonkar', 'Valluvan', 'Vannan', 'Velan', 'Vettuvan',
+    'Other Scheduled Caste'
+  ],
+  ST: [
+    'Cholanaickan', 'Eravallan', 'Irula', 'Kadar', 'Kattunayakan', 'Kurichya',
+    'Kurumba', 'Kuruman', 'Malakkuravan', 'Malayan', 'Malayarayan', 'Malasar',
+    'Marati', 'Mavilan', 'Mudugar', 'Paniya', 'Ulladan', 'Uraly',
+    'Vetta Kuruman', 'Other Scheduled Tribe'
+  ],
+};
+
+// =========================================================================
+// SYSTEM PRIVILEGES & PERMISSION MATRIX
+// =========================================================================
+
+export const SYSTEM_PRIVILEGES = [
+  // Category: ADMISSIONS & INTAKE
+  {
+    code: 'VERIFY_DEPT_ADMISSIONS',
+    name: 'Verify Department Admissions',
+    category: 'ADMISSIONS',
+    description: 'Stage 1 Department Faculty / Tutor verification of qualifying marks & certificates.',
+  },
+  {
+    code: 'VERIFY_NODAL_ADMISSIONS',
+    name: 'Verify Central Nodal Desk',
+    category: 'ADMISSIONS',
+    description: 'Stage 2 Central Admission Nodal Officer verification of quotas & index marks.',
+  },
+  {
+    code: 'VERIFY_PTA_FEES',
+    name: 'Verify PTA Fees Remittance',
+    category: 'ADMISSIONS',
+    description: 'Stage 3 PTA official verification of fee collection and receipt numbers.',
+  },
+  {
+    code: 'APPROVE_PRINCIPAL_ADMISSIONS',
+    name: 'Final Admission Clearance',
+    category: 'ADMISSIONS',
+    description: 'Stage 4 Principal office final sign-off and permanent Admission Number issuance.',
+  },
+  {
+    code: 'ISSUE_TC',
+    name: 'Issue Transfer Certificate (TC)',
+    category: 'ADMISSIONS',
+    description: 'Principal office authority to issue statutory TC and relieve students to Alumni status.',
+  },
+  {
+    code: 'MANAGE_SEAT_MATRIX',
+    name: 'Configure Seat Split-Up Matrix',
+    category: 'ADMISSIONS',
+    description: 'Define and update program reservation quotas across all 15 statutory categories.',
+  },
+  {
+    code: 'GENERATE_ENROLLMENT_TOKENS',
+    name: 'Generate Dynamic QR & Links',
+    category: 'ONBOARDING',
+    description: 'Activate time-limited, scan-capped self-enrollment tokens and QR codes.',
+  },
+  {
+    code: 'REVIEW_JOIN_REQUESTS',
+    name: 'Review Candidate Join Requests',
+    category: 'ONBOARDING',
+    description: 'Verify self-enrollment candidate submissions against official admission lists.',
+  },
+
+  // Category: ACADEMIC GOVERNANCE
+  {
+    code: 'MANAGE_DEPARTMENTS',
+    name: 'Manage Departments Catalog',
+    category: 'ACADEMIC',
+    description: 'Add, update, or decommission academic and supporting departments.',
+  },
+  {
+    code: 'MANAGE_PROGRAMS',
+    name: 'Manage Academic Programs (FYUGP/PG)',
+    category: 'ACADEMIC',
+    description: 'Create and configure degree programs, duration, semesters, and intake capacity.',
+  },
+  {
+    code: 'MANAGE_COURSES',
+    name: 'Manage Courses & Faculty Allocation',
+    category: 'ACADEMIC',
+    description: 'Add courses, assign course tutors/faculty, and configure course syllabi.',
+  },
+  {
+    code: 'APPROVE_CHANGE_REQUESTS',
+    name: 'Approve Data Change Requests',
+    category: 'GOVERNANCE',
+    description: 'Maker-Checker approval authority for student/faculty live profile change requests.',
+  },
+
+  // Category: SYSTEM ADMINISTRATION & SECURITY
+  {
+    code: 'MANAGE_ROLES_PRIVILEGES',
+    name: 'Manage Roles & Privileges',
+    category: 'SYSTEM',
+    description: 'Assign or strip institutional roles and granular privileges across all users.',
+  },
+  {
+    code: 'GOD_MODE_SIMULATE',
+    name: 'God Mode Role Simulation',
+    category: 'SYSTEM',
+    description: 'Simulate any institutional role to audit its interface and workflows.',
+  },
+  {
+    code: 'VIEW_ALL_STUDENTS',
+    name: 'Access Complete Student Registry',
+    category: 'GOVERNANCE',
+    description: 'Search, audit, and inspect student master profile dossiers campus-wide.',
+  },
+  {
+    code: 'PUBLISH_CIRCULARS',
+    name: 'Publish Campus Circulars',
+    category: 'COMMUNICATION',
+    description: 'Broadcast institutional circulars, notices, and academic announcements.',
+  },
+  {
+    code: 'SUPERVISE_RESEARCH',
+    name: 'Supervise Research Scholars',
+    category: 'RESEARCH',
+    description: 'Supervise doctoral research candidates, conduct DC meetings, and review milestones.',
+  },
+];
+
+export const ROLE_DEFAULT_PRIVILEGES = {
+  ADMIN: [
+    'VERIFY_DEPT_ADMISSIONS',
+    'VERIFY_NODAL_ADMISSIONS',
+    'VERIFY_PTA_FEES',
+    'APPROVE_PRINCIPAL_ADMISSIONS',
+    'ISSUE_TC',
+    'MANAGE_SEAT_MATRIX',
+    'GENERATE_ENROLLMENT_TOKENS',
+    'REVIEW_JOIN_REQUESTS',
+    'MANAGE_DEPARTMENTS',
+    'MANAGE_PROGRAMS',
+    'MANAGE_COURSES',
+    'APPROVE_CHANGE_REQUESTS',
+    'MANAGE_ROLES_PRIVILEGES',
+    'GOD_MODE_SIMULATE',
+    'VIEW_ALL_STUDENTS',
+    'PUBLISH_CIRCULARS',
+    'SUPERVISE_RESEARCH',
+  ],
+  PRINCIPAL: [
+    'VERIFY_DEPT_ADMISSIONS',
+    'VERIFY_NODAL_ADMISSIONS',
+    'VERIFY_PTA_FEES',
+    'APPROVE_PRINCIPAL_ADMISSIONS',
+    'ISSUE_TC',
+    'MANAGE_SEAT_MATRIX',
+    'GENERATE_ENROLLMENT_TOKENS',
+    'REVIEW_JOIN_REQUESTS',
+    'MANAGE_DEPARTMENTS',
+    'MANAGE_PROGRAMS',
+    'MANAGE_COURSES',
+    'APPROVE_CHANGE_REQUESTS',
+    'VIEW_ALL_STUDENTS',
+    'PUBLISH_CIRCULARS',
+  ],
+  HOD: [
+    'VERIFY_DEPT_ADMISSIONS',
+    'MANAGE_SEAT_MATRIX',
+    'GENERATE_ENROLLMENT_TOKENS',
+    'REVIEW_JOIN_REQUESTS',
+    'MANAGE_COURSES',
+    'APPROVE_CHANGE_REQUESTS',
+    'VIEW_ALL_STUDENTS',
+  ],
+  FACULTY: [
+    'VERIFY_DEPT_ADMISSIONS',
+    'MANAGE_COURSES',
+    'APPROVE_CHANGE_REQUESTS',
+  ],
+  ADMISSION_NODAL_OFFICER: [
+    'VERIFY_NODAL_ADMISSIONS',
+    'REVIEW_JOIN_REQUESTS',
+    'VIEW_ALL_STUDENTS',
+  ],
+  PTA_OFFICIAL: [
+    'VERIFY_PTA_FEES',
+  ],
+  RESEARCH_SUPERVISOR: [
+    'SUPERVISE_RESEARCH',
+  ],
+  RESEARCH_SCHOLAR: [],
+  STUDENT: [],
+  NON_TEACHING_STAFF: [],
+  WARDEN: ['REVIEW_JOIN_REQUESTS'],
+  CHIEF_SUPERINTENDENT: ['PUBLISH_CIRCULARS'],
+  CLUB_COORDINATOR: ['PUBLISH_CIRCULARS'],
+  ALUMNI: [],
+};
+
+export function computeEffectivePrivileges(roles = [], granted = [], revoked = []) {
+  const privSet = new Set();
+
+  for (const r of roles) {
+    const code = typeof r === 'string' ? r : r?.code;
+    const defaults = ROLE_DEFAULT_PRIVILEGES[code] || [];
+    for (const d of defaults) privSet.add(d);
+  }
+
+  // Add custom granted
+  if (Array.isArray(granted)) {
+    for (const g of granted) privSet.add(g);
+  }
+
+  // Remove custom revoked
+  if (Array.isArray(revoked)) {
+    for (const rev of revoked) privSet.delete(rev);
+  }
+
+  return Array.from(privSet);
+}
+
+
 

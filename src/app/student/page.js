@@ -25,10 +25,12 @@ import {
   Phone,
   Sparkles,
   ArrowRight,
+  ShieldAlert,
+  Eye,
 } from 'lucide-react';
 
 export default function StudentPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -160,6 +162,41 @@ export default function StudentPage() {
         <button onClick={() => signIn('google')} className="btn btn-primary">
           Sign In with Google
         </button>
+      </div>
+    );
+  }
+
+  // Strict God Mode Role Isolation: If simulating a non-student role, isolate student portal
+  const rawRoles = session?.user?.roles || (session?.user?.role ? [session?.user?.role] : []);
+  const roleCodes = rawRoles.map((r) => (typeof r === 'string' ? r : r.code));
+  const isSuperAdmin = roleCodes.includes('ADMIN') || session?.user?.email === 'sureshmagnolia@gmail.com' || session?.user?.activeRole === 'ADMIN';
+  const activeRole = session?.user?.activeRole || session?.user?.role || (isSuperAdmin ? 'ADMIN' : 'STUDENT');
+  const isSimulatingRole = isSuperAdmin && activeRole !== 'ADMIN';
+
+  if (isSimulatingRole && activeRole !== 'STUDENT') {
+    return (
+      <div className="admin-access-denied god-mode-isolated">
+        <div className="simulation-isolation-card">
+          <div className="simulation-isolation-badge">
+            <Eye size={18} />
+            <span>GOD MODE ISOLATION: {activeRole}</span>
+          </div>
+          <h2>Student Portal Hidden</h2>
+          <p>
+            You are currently simulating the <strong>{activeRole}</strong> role in God Mode. The Student Academic Workspace is hidden to provide the authentic {activeRole} view.
+          </p>
+          <div className="isolation-action-btns">
+            <Link
+              href={activeRole === 'FACULTY' || activeRole === 'HOD' ? '/faculty' : activeRole.startsWith('RESEARCH') ? '/research' : '/admin'}
+              className="btn btn-primary"
+            >
+              Return to {activeRole} Portal
+            </Link>
+            <button onClick={() => update({ activeRole: 'STUDENT' })} className="btn btn-secondary">
+              Switch Simulated Role to Student
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

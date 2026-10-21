@@ -83,10 +83,12 @@ function JoinEnrollmentContent() {
       return;
     }
 
-    if (!fullName.trim() || !admissionNo.trim() || !departmentId) {
-      setSubmitError('Full name, admission/application number, and department are mandatory.');
+    if (!fullName.trim() || !departmentId) {
+      setSubmitError('Full name and department are mandatory.');
       return;
     }
+
+    const applicationRef = admissionNo.trim() || `APP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     setIsSubmitting(true);
     try {
@@ -102,7 +104,7 @@ function JoinEnrollmentContent() {
           requested_role: tokenData?.target_role || 'STUDENT',
           department_id: departmentId,
           batch_id: batchId,
-          admission_or_emp_no: admissionNo.trim(),
+          admission_or_emp_no: applicationRef,
         }),
       });
 
@@ -262,16 +264,16 @@ function JoinEnrollmentContent() {
 
               <div className="form-group">
                 <label className="form-label">
-                  <Hash size={15} /> Admission / Application Ref Number
+                  <Hash size={15} /> Application Ref / CAP ID (Optional)
                 </label>
                 <input
                   type="text"
-                  required
                   value={admissionNo}
                   onChange={(e) => setAdmissionNo(e.target.value)}
-                  placeholder="e.g. ADM-2024-CS-042"
+                  placeholder="e.g. CAP2026-BOT-8821 (Leave blank if not yet allotted)"
                   className="form-input"
                 />
+                <span className="input-hint">Official Permanent Admission Number will be granted by Principal's Office upon final approval.</span>
               </div>
 
               <div className="form-group">

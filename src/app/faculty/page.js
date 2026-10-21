@@ -24,12 +24,17 @@ import {
   SlidersHorizontal,
   AlertCircle,
   AlertTriangle,
+  GraduationCap,
+  Search,
+  FileText,
+  CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
 import SeatMatrixModal from '@/components/SeatMatrixModal';
 import { DEPARTMENTS_CATALOG, SEAT_RESERVATION_CATEGORIES } from '@/lib/constants';
 
 export default function FacultyPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
 
   const [activeTab, setActiveTab] = useState('join_requests');
   const [selectedCourse, setSelectedCourse] = useState('CS601');
@@ -39,6 +44,13 @@ export default function FacultyPage() {
   const [joinRequests, setJoinRequests] = useState([]);
   const [changeRequests, setChangeRequests] = useState([]);
   const [notes, setNotes] = useState('');
+
+  // Department Admission Verification State (Stage 1)
+  const [deptDossiers, setDeptDossiers] = useState([]);
+  const [loadingDeptDossiers, setLoadingDeptDossiers] = useState(false);
+  const [processingDossierEmail, setProcessingDossierEmail] = useState(null);
+  const [deptDossierSearch, setDeptDossierSearch] = useState('');
+  const [deptDossierNotes, setDeptDossierNotes] = useState({});
   
   // Courses & Curriculum State
   const [coursesList, setCoursesList] = useState([]);
@@ -70,10 +82,20 @@ export default function FacultyPage() {
     { id: 4, name: 'Sneha Patel', roll_no: 'CS-2024-004', present: true, marks: 27 },
   ]);
 
-  const roles = session?.user?.roles?.map((r) => (typeof r === 'string' ? r : r.code)) || [];
+  const rawRoles = session?.user?.roles || [];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.code));
   const activeRole = session?.user?.activeRole || session?.user?.role || 'STUDENT';
-  const isFaculty = activeRole === 'ADMIN' || activeRole === 'HOD' || activeRole === 'FACULTY' || roles.includes('FACULTY') || roles.includes('HOD') || roles.includes('ADMIN') || roles.includes('PRINCIPAL') || session?.user?.email === 'sureshmagnolia@gmail.com';
-  const isHod = activeRole === 'HOD' || roles.includes('HOD') || roles.includes('ADMIN');
+  const isSuperAdmin = roles.includes('ADMIN') || session?.user?.role === 'ADMIN' || session?.user?.email === 'sureshmagnolia@gmail.com';
+  const isSimulatingRole = isSuperAdmin && activeRole !== 'ADMIN';
+
+  // Strict role isolation: when simulating non-faculty role (e.g. STUDENT), restrict access
+  const isFaculty = isSimulatingRole
+    ? (activeRole === 'FACULTY' || activeRole === 'HOD' || activeRole === 'PRINCIPAL')
+    : (activeRole === 'ADMIN' || activeRole === 'HOD' || activeRole === 'FACULTY' || roles.includes('FACULTY') || roles.includes('HOD') || roles.includes('ADMIN') || roles.includes('PRINCIPAL') || isSuperAdmin);
+  
+  const isHod = isSimulatingRole
+    ? (activeRole === 'HOD' || activeRole === 'PRINCIPAL')
+    : (activeRole === 'HOD' || roles.includes('HOD') || roles.includes('ADMIN') || isSuperAdmin);
 
   async function loadDepartmentApprovals() {
     setLoadingApprovals(true);
@@ -92,9 +114,52 @@ export default function FacultyPage() {
     }
   }
 
+  async function loadDeptDossiers() {
+    setLoadingDeptDossiers(true);
+    try {
+      const res = await fetch('/api/admissions/verify?stage=DEPT_LEVEL');
+      const data = await res.json();
+      if (data.dossiers) setDeptDossiers(data.dossiers);
+    } catch (err) {
+      console.error('Error loading dept admission dossiers:', err);
+    } finally {
+      setLoadingDeptDossiers(false);
+    }
+  }
+
+  async function handleDeptVerify(email, action) {
+    setProcessingDossierEmail(email);
+    try {
+      const res = await fetch('/api/admissions/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          step: 1,
+          verification_action: action, // 'APPROVE' or 'REVISE'
+          notes: deptDossierNotes[email] || '',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Failed to verify candidate dossier');
+        return;
+      }
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 4000);
+      await loadDeptDossiers();
+    } catch (err) {
+      console.error('Error verifying dossier:', err);
+      alert('Failed to process verification');
+    } finally {
+      setProcessingDossierEmail(null);
+    }
+  }
+
   useEffect(() => {
     if (session?.user && isFaculty) {
       loadDepartmentApprovals();
+      loadDeptDossiers();
       loadCoursesData();
     }
   }, [session, isFaculty]);
@@ -254,6 +319,30 @@ export default function FacultyPage() {
   }
 
   if (!isFaculty) {
+    if (isSimulatingRole) {
+      return (
+        <div className="admin-access-denied god-mode-isolated">
+          <div className="simulation-isolation-card">
+            <div className="simulation-isolation-badge">
+              <ShieldAlert size={18} />
+              <span>GOD MODE ISOLATION: {activeRole}</span>
+            </div>
+            <h2>Faculty & Department Workspace Hidden</h2>
+            <p>
+              You are currently simulating the <strong>{activeRole}</strong> role in God Mode. The Faculty & HoD Console is hidden to provide the authentic {activeRole} view.
+            </p>
+            <div className="isolation-action-btns">
+              <Link href={activeRole === 'STUDENT' ? '/student' : activeRole.startsWith('RESEARCH') ? '/research' : '/'} className="btn btn-primary">
+                Return to {activeRole} Portal
+              </Link>
+              <button onClick={() => update({ activeRole: 'FACULTY' })} className="btn btn-secondary">
+                Switch Simulated Role to Faculty
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="admin-access-denied">
         <ShieldAlert size={56} className="denied-icon" />
@@ -304,6 +393,22 @@ export default function FacultyPage() {
               </div>
               <span className={`sidebar-item-badge ${joinRequests.length > 0 ? 'highlight' : ''}`}>
                 {joinRequests.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('dept_admissions')}
+              className={`sidebar-nav-item ${activeTab === 'dept_admissions' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <GraduationCap size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Stage 1: Admission Desk</span>
+                <span className="sidebar-item-desc">Department level audit</span>
+              </div>
+              <span className={`sidebar-item-badge ${deptDossiers.length > 0 ? 'highlight-emerald' : ''}`}>
+                {deptDossiers.length}
               </span>
             </button>
 
@@ -466,6 +571,148 @@ export default function FacultyPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* TAB: STAGE 1 - DEPARTMENT ADMISSION VERIFICATION DESK */}
+      {/* ------------------------------------------------------------- */}
+      {activeTab === 'dept_admissions' && (
+        <div className="tab-section-content">
+          <div className="admin-card">
+            <div className="card-header" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                <GraduationCap size={24} className="card-icon text-emerald" />
+                <div>
+                  <h3 className="card-title">Stage 1: Department Level Admission Verification</h3>
+                  <p className="card-desc">
+                    Class Tutors and HoD audit submitted student profiles, mark sheets, and quota claims. Approving forwards the dossier to the Central Admission Nodal Officer (Stage 2).
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ position: 'relative' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }} />
+                  <input
+                    type="text"
+                    placeholder="Search candidate name, CAP ID..."
+                    value={deptDossierSearch}
+                    onChange={(e) => setDeptDossierSearch(e.target.value)}
+                    className="form-input"
+                    style={{ paddingLeft: '32px', fontSize: '0.82rem', width: '220px' }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={loadDeptDossiers}
+                  className="btn-refresh"
+                  title="Reload department queue"
+                >
+                  <RefreshCw size={15} className={loadingDeptDossiers ? 'spin' : ''} />
+                </button>
+              </div>
+            </div>
+
+            {loadingDeptDossiers ? (
+              <div className="empty-state-box">
+                <Clock size={32} className="spin text-emerald" />
+                <p>Loading candidate admission dossiers for departmental audit...</p>
+              </div>
+            ) : deptDossiers.filter(d => !deptDossierSearch || (d.full_name || '').toLowerCase().includes(deptDossierSearch.toLowerCase()) || (d.cap_id || '').toLowerCase().includes(deptDossierSearch.toLowerCase())).length === 0 ? (
+              <div className="empty-state-box">
+                <CheckCircle size={36} className="text-green" />
+                <p>No candidates currently awaiting Stage 1 Department Level Verification.</p>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  Candidates appear here once their self-enrollment is approved and they submit their master onboarding profile.
+                </span>
+              </div>
+            ) : (
+              <div className="requests-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px', marginTop: '16px' }}>
+                {deptDossiers
+                  .filter(d => !deptDossierSearch || (d.full_name || '').toLowerCase().includes(deptDossierSearch.toLowerCase()) || (d.cap_id || '').toLowerCase().includes(deptDossierSearch.toLowerCase()))
+                  .map((cand) => (
+                    <div key={cand.id || cand.user_email} className="dossier-card">
+                      <div className="dossier-card-top">
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <div className="applicant-avatar-circle">
+                            {(cand.full_name || 'S')[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#f8fafc', fontWeight: 700 }}>
+                              {cand.full_name || 'Candidate'}
+                            </h4>
+                            <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{cand.user_email}</span>
+                          </div>
+                        </div>
+                        <span className="stage-badge pending">STAGE 1: DEPT PENDING</span>
+                      </div>
+
+                      <div className="dossier-meta-grid">
+                        <div className="meta-box">
+                          <span className="meta-lbl">CAP / App ID</span>
+                          <span className="meta-val highlight">{cand.cap_id || cand.admission_or_emp_no || 'N/A'}</span>
+                        </div>
+                        <div className="meta-box">
+                          <span className="meta-lbl">Program & Dept</span>
+                          <span className="meta-val">{cand.program_name || cand.program_code || 'UG Degree'}</span>
+                        </div>
+                        <div className="meta-box">
+                          <span className="meta-lbl">Allotted Quota</span>
+                          <span className="meta-val">{cand.admission_quota || 'General Merit'}</span>
+                        </div>
+                        <div className="meta-box">
+                          <span className="meta-lbl">Community / Caste</span>
+                          <span className="meta-val">{cand.caste_name || cand.actual_category || 'General'}</span>
+                        </div>
+                        <div className="meta-box">
+                          <span className="meta-lbl">Qualifying Exam</span>
+                          <span className="meta-val">{cand.qualifying_percentage ? `${cand.qualifying_percentage}%` : 'Not recorded'}</span>
+                        </div>
+                        <div className="meta-box">
+                          <span className="meta-lbl">Candidate Mobile</span>
+                          <span className="meta-val">{cand.mobile_number || 'N/A'}</span>
+                        </div>
+                      </div>
+
+                      {/* Line-item note / observation for tutor */}
+                      <div style={{ marginTop: '12px' }}>
+                        <input
+                          type="text"
+                          placeholder="Verification observations / notes (optional)"
+                          value={deptDossierNotes[cand.user_email] || ''}
+                          onChange={(e) => setDeptDossierNotes({ ...deptDossierNotes, [cand.user_email]: e.target.value })}
+                          className="form-input"
+                          style={{ fontSize: '0.8rem', padding: '6px 10px', width: '100%' }}
+                        />
+                      </div>
+
+                      <div className="dossier-actions" style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          disabled={processingDossierEmail === cand.user_email}
+                          onClick={() => handleDeptVerify(cand.user_email, 'APPROVE')}
+                          className="btn-approve"
+                          style={{ flex: 1, justifyContent: 'center' }}
+                        >
+                          <CheckCircle2 size={15} /> Verify & Send to Nodal Desk
+                        </button>
+                        <button
+                          type="button"
+                          disabled={processingDossierEmail === cand.user_email}
+                          onClick={() => handleDeptVerify(cand.user_email, 'REVISE')}
+                          className="btn-reject"
+                          style={{ justifyContent: 'center' }}
+                          title="Return to student with correction instructions"
+                        >
+                          <XCircle size={15} /> Request Corrections
+                        </button>
+                      </div>
+                    </div>
+                  ))}
               </div>
             )}
           </div>

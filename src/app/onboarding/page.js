@@ -28,7 +28,7 @@ import {
   Users,
   Check,
 } from 'lucide-react';
-import { FORM_REFERENCE_DATA } from '@/lib/constants';
+import { FORM_REFERENCE_DATA, COMMUNITIES_CATALOG, ADMISSION_VERIFICATION_STAGES } from '@/lib/constants';
 
 export default function OnboardingWizardPage() {
   const { data: session, status } = useSession();
@@ -40,6 +40,14 @@ export default function OnboardingWizardPage() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Alumni Career & Education Update State
+  const [alumniStatus, setAlumniStatus] = useState('Employed in Industry');
+  const [alumniOrg, setAlumniOrg] = useState('');
+  const [alumniCourse, setAlumniCourse] = useState('');
+  const [alumniCity, setAlumniCity] = useState('');
+  const [alumniSaving, setAlumniSaving] = useState(false);
+  const [alumniSaved, setAlumniSaved] = useState(false);
 
   // STEP 1: CAP & PROGRAM
   const [capId, setCapId] = useState('');
@@ -193,8 +201,13 @@ export default function OnboardingWizardPage() {
             setCommunityCertUrl(p.documents.community_cert_url || '');
             setIncomeCertUrl(p.documents.income_cert_url || '');
           }
+
+          if (p.alumni_current_status) setAlumniStatus(p.alumni_current_status);
+          if (p.alumni_organization) setAlumniOrg(p.alumni_organization);
+          if (p.alumni_higher_studies) setAlumniCourse(p.alumni_higher_studies);
+          if (p.alumni_city) setAlumniCity(p.alumni_city);
         } else {
-          setFullName(session.user.name || '');
+          setFullName(session?.user?.name || '');
         }
       } catch (err) {
         console.error('Error loading onboarding data:', err);
@@ -205,9 +218,73 @@ export default function OnboardingWizardPage() {
     initData();
   }, [session, status]);
 
-  const isLocked = profile?.profile_status === 'APPROVED';
-  const isSubmitted = profile?.profile_status === 'SUBMITTED';
+  const isLocked = profile?.profile_status === 'APPROVED' || profile?.verification_stage === 'ADMITTED_ACTIVE';
+  const isSubmitted = profile?.profile_status === 'SUBMITTED' || Boolean(profile?.verification_stage);
   const hasCorrections = profile?.profile_status === 'CORRECTION_REQUIRED';
+  const isTcIssued = profile?.profile_status === 'TC_ISSUED' || Boolean(profile?.tc_serial_no) || session?.user?.role === 'ALUMNI';
+
+  // Profile Completeness Calculation
+  const masterFields = [
+    { key: 'capId', val: capId, label: 'CAP Registration ID' },
+    { key: 'programId', val: programId, label: 'Enrolled Program' },
+    { key: 'departmentId', val: departmentId, label: 'Department' },
+    { key: 'admissionQuota', val: admissionQuota, label: 'Admission Quota' },
+    { key: 'fullName', val: fullName, label: 'Full Legal Name' },
+    { key: 'dob', val: dob, label: 'Date of Birth' },
+    { key: 'gender', val: gender, label: 'Gender' },
+    { key: 'bloodGroup', val: bloodGroup, label: 'Blood Group' },
+    { key: 'aadhaarNo', val: aadhaarNo, label: 'Aadhaar Identification' },
+    { key: 'mobileNumber', val: mobileNumber, label: 'Mobile Number' },
+    { key: 'permanentAddress', val: permanentAddress, label: 'Permanent Address' },
+    { key: 'district', val: district, label: 'District' },
+    { key: 'pincode', val: pincode, label: 'PIN Code' },
+    { key: 'parentName', val: parentName, label: 'Parent / Guardian Name' },
+    { key: 'parentMobile', val: parentMobile, label: 'Parent Mobile' },
+    { key: 'religion', val: religion, label: 'Religion' },
+    { key: 'actualCategory', val: actualCategory, label: 'Category' },
+    { key: 'casteName', val: casteName, label: 'Caste / Community' },
+    { key: 'familyStatus', val: familyStatus, label: 'Economic Family Status' },
+    { key: 'previousInstitution', val: previousInstitution, label: 'Previous Institution' },
+    { key: 'qualifyingExam', val: qualifyingExam, label: 'Qualifying Examination' },
+    { key: 'qualifyingPercentage', val: qualifyingPercentage, label: 'Qualifying Exam Marks %' },
+    { key: 'tcNo', val: tcNo, label: 'Previous TC Number' },
+    { key: 'tcDate', val: tcDate, label: 'Previous TC Date' },
+  ];
+
+  const filledCount = masterFields.filter((f) => String(f.val || '').trim().length > 0).length;
+  const completenessPct = Math.round((filledCount / masterFields.length) * 100);
+  const missingFieldNames = masterFields.filter((f) => !String(f.val || '').trim()).map(f => f.label);
+
+  async function handleAlumniSubmit(e) {
+    e.preventDefault();
+    setAlumniSaving(true);
+    try {
+      const res = await fetch('/api/admissions/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'UPDATE_ALUMNI',
+          email: session.user.email,
+          current_status: alumniStatus,
+          organization: alumniOrg,
+          higher_studies: alumniCourse,
+          city: alumniCity,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Failed to update alumni status');
+        return;
+      }
+      setAlumniSaved(true);
+      setTimeout(() => setAlumniSaved(false), 4000);
+    } catch (err) {
+      console.error('Error updating alumni record:', err);
+      alert('Failed to update alumni record');
+    } finally {
+      setAlumniSaving(false);
+    }
+  }
 
   // Filter programs based on selected department
   const filteredPrograms = programs.filter(
@@ -398,6 +475,205 @@ export default function OnboardingWizardPage() {
         <div className={`onboarding-alert ${message.type}`}>
           {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
           <span>{message.text}</span>
+        </div>
+      )}
+
+      {/* TC ISSUED / ALUMNI NOTICE & PROFILE UPDATER */}
+      {isTcIssued && (
+        <div className="alumni-notice-banner">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+              <FileText size={24} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <h3 style={{ margin: '0 0 4px 0', color: '#fca5a5', fontSize: '1.15rem' }}>
+                  Transfer Certificate Issued • Academic Status: Alumni
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                  TC Serial Number: <strong style={{ color: '#ffffff' }}>{profile?.tc_serial_no || 'Issued by Principal Office'}</strong> &bull; Reason: {profile?.tc_reason || 'Course Completed / Relieved'}
+                </p>
+                <span style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginTop: '4px' }}>
+                  Operational student features (daily attendance, internal marks, elections) are relieved. You have permanent alumni access to your transcripts and can update your post-college engagements below.
+                </span>
+              </div>
+            </div>
+            <span className="stage-badge tc">ALUMNI RECORD</span>
+          </div>
+
+          <form onSubmit={handleAlumniSubmit} className="alumni-update-card">
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <User size={16} className="text-emerald" /> Update Your Current Engagement ("What you are doing now")
+            </h4>
+            <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+              Help your alma mater and department track your career path for NAAC, NIRF, and Alumni Directory milestones.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <div>
+                <label className="form-label" style={{ fontSize: '0.78rem' }}>Current Activity Status *</label>
+                <select
+                  value={alumniStatus}
+                  onChange={(e) => setAlumniStatus(e.target.value)}
+                  className="form-select"
+                  style={{ fontSize: '0.82rem', padding: '8px' }}
+                >
+                  <option value="Employed in Industry">Employed in Industry / Corporate</option>
+                  <option value="Higher Studies in University">Higher Studies (PG / Ph.D. / M.Phil)</option>
+                  <option value="Government / Public Sector">Government / Public Sector Service</option>
+                  <option value="Civil Services / Competitive Exam Prep">Civil Services / Competitive Exam Prep</option>
+                  <option value="Entrepreneur / Startup Founder">Entrepreneur / Startup Founder</option>
+                  <option value="Self-Employed / Professional Practice">Self-Employed / Professional Practice</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontSize: '0.78rem' }}>Organization / University</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Infosys / Univ of Kerala / TCS"
+                  value={alumniOrg}
+                  onChange={(e) => setAlumniOrg(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.82rem', padding: '8px' }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontSize: '0.78rem' }}>Role / Designation / Degree</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Software Engineer / M.Sc Botany"
+                  value={alumniCourse}
+                  onChange={(e) => setAlumniCourse(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.82rem', padding: '8px' }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontSize: '0.78rem' }}>Current City & Country</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Bengaluru, India / London, UK"
+                  value={alumniCity}
+                  onChange={(e) => setAlumniCity(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.82rem', padding: '8px' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
+              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                💬 Interactive Alumni Forum & Mentorship Space launching in upcoming Stage 2 release.
+              </span>
+              <button
+                type="submit"
+                disabled={alumniSaving}
+                className="btn-primary-action"
+                style={{ fontSize: '0.82rem', padding: '8px 16px' }}
+              >
+                {alumniSaved ? <CheckCircle2 size={15} /> : <Save size={15} />}
+                {alumniSaved ? 'Alumni Profile Updated!' : alumniSaving ? 'Saving...' : 'Save Alumni Status Update'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* STATUTORY PROFILE COMPLETENESS METER */}
+      <div className="completeness-meter-card">
+        <div className="completeness-info-left">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', fontWeight: 700 }}>
+              Statutory Master Profile Completeness
+            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px' }}>
+              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: completenessPct === 100 ? '#34d399' : '#38bdf8' }}>
+                {completenessPct}%
+              </span>
+              <span style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>
+                {completenessPct === 100
+                  ? 'All statutory fields completed. Ready for Institutional Verification!'
+                  : `${filledCount} of ${masterFields.length} statutory data points recorded (${missingFieldNames.length} missing)`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div className="completeness-bar-bg" style={{ width: '180px' }}>
+            <div
+              className="completeness-bar-fill"
+              style={{
+                width: `${completenessPct}%`,
+                background: completenessPct === 100
+                  ? 'linear-gradient(90deg, #10b981, #059669)'
+                  : completenessPct >= 75
+                  ? 'linear-gradient(90deg, #38bdf8, #10b981)'
+                  : 'linear-gradient(90deg, #f59e0b, #ef4444)',
+              }}
+            />
+          </div>
+          <span style={{
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            padding: '4px 10px',
+            borderRadius: '6px',
+            background: completenessPct === 100 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+            color: completenessPct === 100 ? '#34d399' : '#94a3b8',
+            border: '1px solid ' + (completenessPct === 100 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.1)'),
+          }}>
+            {completenessPct === 100 ? 'Audit Ready' : `${100 - completenessPct}% Remaining`}
+          </span>
+        </div>
+      </div>
+
+      {/* 4-STAGE ADMISSION VERIFICATION PIPELINE PROGRESS */}
+      {(isSubmitted || isLocked || profile?.verification_stage) && (
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', padding: '0 4px' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Multi-Step Admission Verification Pipeline
+            </span>
+            {profile?.official_admission_no && (
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#34d399', background: 'rgba(16, 185, 129, 0.15)', padding: '3px 10px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                Official Admission No: {profile.official_admission_no}
+              </span>
+            )}
+          </div>
+
+          <div className="verification-pipeline-stepper">
+            {ADMISSION_VERIFICATION_STAGES.map((stg, idx) => {
+              const currentStage = profile?.verification_stage || 'DEPT_LEVEL';
+              const stageOrder = ['DEPT_LEVEL', 'NODAL_DESK', 'PTA_DESK', 'PRINCIPAL_DESK', 'ADMITTED_ACTIVE'];
+              const currentIdx = stageOrder.indexOf(currentStage);
+              const isStepDone = currentIdx > idx || currentStage === 'ADMITTED_ACTIVE' || isLocked;
+              const isStepActive = currentIdx === idx && currentStage !== 'ADMITTED_ACTIVE' && !isLocked;
+
+              return (
+                <div key={stg.step} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                  <div className={`pipeline-step-item ${isStepDone ? 'completed' : isStepActive ? 'active' : ''}`}>
+                    <div className="step-indicator-bubble">
+                      {isStepDone ? <Check size={16} /> : stg.step}
+                    </div>
+                    <div className="step-text-wrap">
+                      <span className="step-name">Stage {stg.step}: {stg.title.split(' ')[0]} {stg.title.split(' ')[1]}</span>
+                      <span className="step-status-sub">
+                        {isStepDone
+                          ? 'Verified & Approved'
+                          : isStepActive
+                          ? 'Under Verification'
+                          : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                  {idx < ADMISSION_VERIFICATION_STAGES.length - 1 && (
+                    <div className={`pipeline-connector-line ${isStepDone ? 'done' : ''}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -762,15 +1038,28 @@ export default function OnboardingWizardPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Caste / Sub-Caste Name</label>
+                <label className="form-label">Caste / Community Name *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Nair, Thiyya, Ezhava, Muslim, Pulaya"
+                  list="communities-datalist"
+                  placeholder="Search or select community (e.g. Ezhava, Nair, Muslim...)"
                   disabled={isLocked || isSubmitted}
                   value={casteName}
                   onChange={(e) => setCasteName(e.target.value)}
                   className="form-input"
                 />
+                <datalist id="communities-datalist">
+                  {Object.entries(COMMUNITIES_CATALOG).flatMap(([cat, list]) =>
+                    list.map((c) => (
+                      <option key={`${cat}-${c}`} value={c}>
+                        {c} ({cat})
+                      </option>
+                    ))
+                  )}
+                </datalist>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '3px', display: 'block' }}>
+                  204 statutory institutional communities loaded from Necttos master catalog. Type to filter or enter custom community.
+                </span>
               </div>
 
               <div className="form-group">

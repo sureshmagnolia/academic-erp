@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import {
   GraduationCap,
@@ -37,6 +37,7 @@ const DEMO_ACCOUNTS = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session, status, update } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
@@ -93,36 +94,74 @@ export default function Navbar() {
 
   const isSimulatingRole = isSuperAdmin && activeRole !== 'ADMIN';
 
+  // Strict role isolation: when simulating in God Mode, only show links belonging to the simulated role
+  const canAccessAdmin = isSimulatingRole
+    ? (activeRole === 'ADMIN' || activeRole === 'PRINCIPAL')
+    : (isSuperAdmin || roleCodes.includes('ADMIN') || roleCodes.includes('PRINCIPAL'));
+
+  const canAccessFaculty = isSimulatingRole
+    ? (activeRole === 'FACULTY' || activeRole === 'HOD')
+    : (isSuperAdmin || activeRole === 'FACULTY' || activeRole === 'HOD' || roleCodes.includes('FACULTY') || roleCodes.includes('HOD'));
+
+  const canAccessResearch = isSimulatingRole
+    ? (activeRole === 'RESEARCH_SCHOLAR' || activeRole === 'RESEARCH_SUPERVISOR')
+    : (isSuperAdmin || activeRole === 'RESEARCH_SCHOLAR' || activeRole === 'RESEARCH_SUPERVISOR' || roleCodes.includes('RESEARCH_SCHOLAR') || roleCodes.includes('RESEARCH_SUPERVISOR'));
+
+  const canAccessStudent = isSimulatingRole
+    ? (activeRole === 'STUDENT')
+    : (isSuperAdmin || activeRole === 'STUDENT' || roleCodes.includes('STUDENT'));
+
   async function handleSwitchRole(roleCode) {
     setRoleDropdownOpen(false);
-    if (roleCode === activeRole) return;
     await update({ activeRole: roleCode });
+    if (roleCode === 'STUDENT') {
+      router.push('/student');
+    } else if (roleCode === 'FACULTY' || roleCode === 'HOD') {
+      router.push('/faculty');
+    } else if (roleCode === 'RESEARCH_SCHOLAR' || roleCode === 'RESEARCH_SUPERVISOR') {
+      router.push('/research');
+    } else if (roleCode === 'ADMIN' || roleCode === 'PRINCIPAL') {
+      router.push('/admin');
+    } else {
+      router.push('/');
+    }
   }
 
   async function handleResetToAdmin() {
+    setRoleDropdownOpen(false);
     await update({ activeRole: 'ADMIN' });
+    router.push('/admin');
   }
-
-  const canAccessAdmin = isSuperAdmin || roleCodes.includes('ADMIN') || roleCodes.includes('PRINCIPAL');
-  const canAccessFaculty = isSuperAdmin || activeRole === 'FACULTY' || activeRole === 'HOD' || roleCodes.includes('FACULTY') || roleCodes.includes('HOD');
-  const canAccessResearch = isSuperAdmin || activeRole === 'RESEARCH_SCHOLAR' || activeRole === 'RESEARCH_SUPERVISOR' || roleCodes.includes('RESEARCH_SCHOLAR') || roleCodes.includes('RESEARCH_SUPERVISOR');
-  const canAccessStudent = isSuperAdmin || activeRole === 'STUDENT' || roleCodes.includes('STUDENT');
 
   return (
     <>
-      {/* Admin God Mode Active Banner */}
+      {/* Admin God Mode Active Banner with Quick Role Jumper */}
       {isSimulatingRole && (
         <div className="god-mode-banner">
           <div className="god-mode-content">
             <span className="god-mode-badge">
-              <Eye size={14} /> GOD MODE SIMULATION
+              <Eye size={14} /> GOD MODE: STRICT {activeRole} ISOLATION
             </span>
             <span className="god-mode-text">
-              Viewing interface as <strong>{activeRole}</strong> ({MASTER_ROLES.find((m) => m.code === activeRole)?.name})
+              Simulating <strong>{activeRole}</strong> ({MASTER_ROLES.find((m) => m.code === activeRole)?.name}) &bull; Non-role UI restricted
             </span>
-            <button onClick={handleResetToAdmin} className="god-mode-reset-btn">
-              <RefreshCw size={13} /> Exit & Return to Super Admin
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <select
+                value={activeRole}
+                onChange={(e) => handleSwitchRole(e.target.value)}
+                className="god-mode-quick-select"
+                title="Switch simulated role"
+              >
+                {MASTER_ROLES.map((mr) => (
+                  <option key={mr.code} value={mr.code}>
+                    Switch to: {mr.name} ({mr.code})
+                  </option>
+                ))}
+              </select>
+              <button onClick={handleResetToAdmin} className="god-mode-reset-btn">
+                <RefreshCw size={13} /> Exit to Admin
+              </button>
+            </div>
           </div>
         </div>
       )}

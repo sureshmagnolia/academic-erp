@@ -2,10 +2,13 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import {
   MASTER_ROLES,
+  SYSTEM_PRIVILEGES,
+  ROLE_DEFAULT_PRIVILEGES,
   listAllUsers,
   createOrUpdateUser,
   assignRoleToUser,
   removeRoleFromUser,
+  updateUserPrivileges,
 } from '@/lib/db';
 
 export async function GET() {
@@ -20,6 +23,8 @@ export async function GET() {
     const users = await listAllUsers();
     return NextResponse.json({
       masterRoles: MASTER_ROLES,
+      systemPrivileges: SYSTEM_PRIVILEGES,
+      roleDefaultPrivileges: ROLE_DEFAULT_PRIVILEGES,
       users,
     });
   } catch (err) {
@@ -105,3 +110,45 @@ export async function DELETE(req) {
     return NextResponse.json({ error: 'Failed to remove role' }, { status: 500 });
   }
 }
+
+export async function PATCH(req) {
+  const session = await auth();
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.roles?.some((r) => r.code === 'ADMIN' || r.code === 'PRINCIPAL');
+
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { email, granted_privileges, revoked_privileges, primary_type, department, designation, status } = body;
+
+    if (!email) {
+      return NextResponse.json({ error: 'User email is required' }, { status: 400 });
+    }
+
+    if (granted_privileges !== undefined || revoked_privileges !== undefined) {
+      await updateUserPrivileges({
+        email,
+        granted_privileges: granted_privileges || [],
+        revoked_privileges: revoked_privileges || [],
+      });
+    }
+
+    if (primary_type || department || designation || status) {
+      await createOrUpdateUser({
+        email,
+        primary_type,
+        department,
+        designation,
+        status,
+      });
+    }
+
+    return NextResponse.json({ success: true, message: `Privileges and user settings updated for ${email}` });
+  } catch (err) {
+    console.error('Error updating user privileges:', err);
+    return NextResponse.json({ error: 'Failed to update user privileges' }, { status: 500 });
+  }
+}
+
