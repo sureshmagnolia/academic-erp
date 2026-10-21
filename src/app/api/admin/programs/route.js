@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { createAcademicProgram, deleteAcademicProgram, listAllAcademicPrograms } from '@/lib/db';
+import { createAcademicProgram, deleteAcademicProgram, listAllAcademicPrograms, updateAcademicProgram } from '@/lib/db';
 
 export async function GET(req) {
   try {
@@ -43,6 +43,39 @@ export async function POST(req) {
   } catch (err) {
     console.error('Error creating program:', err);
     return NextResponse.json({ error: err.message || 'Failed to create academic program' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req) {
+  const session = await auth();
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.roles?.some((r) => r.code === 'ADMIN' || r.code === 'PRINCIPAL');
+
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized: Administrator or Principal privileges required' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { id, department_id, name, code, level, duration_years, total_semesters, intake_capacity } = body;
+    if (!id) {
+      return NextResponse.json({ error: 'Program ID is required for editing' }, { status: 400 });
+    }
+
+    const program = await updateAcademicProgram({
+      id,
+      department_id,
+      name,
+      code,
+      level,
+      duration_years,
+      total_semesters,
+      intake_capacity,
+    });
+
+    return NextResponse.json({ success: true, program });
+  } catch (err) {
+    console.error('Error updating program:', err);
+    return NextResponse.json({ error: err.message || 'Failed to update academic program' }, { status: 500 });
   }
 }
 

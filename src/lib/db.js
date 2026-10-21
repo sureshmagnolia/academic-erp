@@ -2050,6 +2050,76 @@ export async function createAcademicProgram({ department_id, name, code, level, 
   return newProg;
 }
 
+export async function updateDepartment({ id, name, code, type, description, hod_email }) {
+  await initDb();
+  const sql = getSql();
+  if (sql) {
+    try {
+      const rows = await sql`
+        UPDATE departments
+        SET 
+          name = COALESCE(${name}, name),
+          code = COALESCE(${code ? code.toUpperCase() : null}, code),
+          type = COALESCE(${type}, type),
+          description = COALESCE(${description}, description),
+          hod_email = ${hod_email !== undefined ? hod_email : null}
+        WHERE id = ${id}
+        RETURNING *;
+      `;
+      return rows[0];
+    } catch (err) {
+      console.error('updateDepartment sql error:', err);
+      throw err;
+    }
+  }
+
+  const dept = memoryStore.departments.find((d) => d.id === id);
+  if (!dept) throw new Error(`Department ${id} not found`);
+  if (name) dept.name = name;
+  if (code) dept.code = code.toUpperCase();
+  if (type) dept.type = type;
+  if (description !== undefined) dept.description = description;
+  if (hod_email !== undefined) dept.hod_email = hod_email;
+  return dept;
+}
+
+export async function updateAcademicProgram({ id, department_id, name, code, level, duration_years, total_semesters, intake_capacity }) {
+  await initDb();
+  const sql = getSql();
+  if (sql) {
+    try {
+      const rows = await sql`
+        UPDATE academic_programs
+        SET 
+          department_id = COALESCE(${department_id}, department_id),
+          name = COALESCE(${name}, name),
+          code = COALESCE(${code ? code.toUpperCase() : null}, code),
+          level = COALESCE(${level}, level),
+          duration_years = COALESCE(${duration_years ? parseInt(duration_years, 10) : null}, duration_years),
+          total_semesters = COALESCE(${total_semesters ? parseInt(total_semesters, 10) : null}, total_semesters),
+          intake_capacity = COALESCE(${intake_capacity ? parseInt(intake_capacity, 10) : null}, intake_capacity)
+        WHERE id = ${id}
+        RETURNING *;
+      `;
+      return rows[0];
+    } catch (err) {
+      console.error('updateAcademicProgram sql error:', err);
+      throw err;
+    }
+  }
+
+  const prog = memoryStore.academic_programs.find((p) => p.id === id);
+  if (!prog) throw new Error(`Academic program ${id} not found`);
+  if (department_id) prog.department_id = department_id;
+  if (name) prog.name = name;
+  if (code) prog.code = code.toUpperCase();
+  if (level) prog.level = level;
+  if (duration_years) prog.duration_years = parseInt(duration_years, 10);
+  if (total_semesters) prog.total_semesters = parseInt(total_semesters, 10);
+  if (intake_capacity) prog.intake_capacity = parseInt(intake_capacity, 10);
+  return prog;
+}
+
 
 // -------------------------------------------------------------
 // DEPARTMENT & PROGRAM DELETION

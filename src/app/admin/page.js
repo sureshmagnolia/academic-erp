@@ -113,6 +113,28 @@ export default function AdminPage() {
   const [newProgIntake, setNewProgIntake] = useState(60);
   const [progSubmitting, setProgSubmitting] = useState(false);
 
+  // Edit Department Form State
+  const [showEditDeptModal, setShowEditDeptModal] = useState(false);
+  const [editingDept, setEditingDept] = useState(null);
+  const [editDeptName, setEditDeptName] = useState('');
+  const [editDeptCode, setEditDeptCode] = useState('');
+  const [editDeptType, setEditDeptType] = useState('PROGRAM_OFFERING');
+  const [editDeptDesc, setEditDeptDesc] = useState('');
+  const [editDeptHod, setEditDeptHod] = useState('');
+  const [editDeptSubmitting, setEditDeptSubmitting] = useState(false);
+
+  // Edit Program Form State
+  const [showEditProgModal, setShowEditProgModal] = useState(false);
+  const [editingProg, setEditingProg] = useState(null);
+  const [editProgDeptId, setEditProgDeptId] = useState('');
+  const [editProgName, setEditProgName] = useState('');
+  const [editProgCode, setEditProgCode] = useState('');
+  const [editProgLevel, setEditProgLevel] = useState('UG');
+  const [editProgDuration, setEditProgDuration] = useState(3);
+  const [editProgSems, setEditProgSems] = useState(8);
+  const [editProgIntake, setEditProgIntake] = useState(60);
+  const [editProgSubmitting, setEditProgSubmitting] = useState(false);
+
   const [tokens, setTokens] = useState([]);
   const [tokenTitle, setTokenTitle] = useState('');
   const [tokenRole, setTokenRole] = useState('STUDENT');
@@ -442,6 +464,100 @@ export default function AdminPage() {
       setErrorMsg('Network error while creating program.');
     } finally {
       setProgSubmitting(false);
+    }
+  }
+
+  function openEditDeptModal(dept) {
+    setEditingDept(dept);
+    setEditDeptName(dept.name || '');
+    setEditDeptCode(dept.code || '');
+    setEditDeptType(dept.type || 'PROGRAM_OFFERING');
+    setEditDeptDesc(dept.description || '');
+    setEditDeptHod(dept.hod_email || '');
+    setShowEditDeptModal(true);
+  }
+
+  async function handleUpdateDeptSubmit(e) {
+    e.preventDefault();
+    if (!editingDept || !editDeptName.trim() || !editDeptCode.trim()) return;
+
+    setEditDeptSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/admin/departments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingDept.id,
+          name: editDeptName.trim(),
+          code: editDeptCode.trim().toUpperCase(),
+          type: editDeptType,
+          description: editDeptDesc.trim(),
+          hod_email: editDeptHod.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(`Department "${editDeptName}" updated successfully!`);
+        setShowEditDeptModal(false);
+        setEditingDept(null);
+        loadAllData();
+      } else {
+        setErrorMsg(data.error || 'Failed to update department.');
+      }
+    } catch {
+      setErrorMsg('Network error while updating department.');
+    } finally {
+      setEditDeptSubmitting(false);
+    }
+  }
+
+  function openEditProgModal(prog, dept) {
+    setEditingProg(prog);
+    setEditProgDeptId(dept?.id || prog.department_id || '');
+    setEditProgName(prog.name || '');
+    setEditProgCode(prog.code || '');
+    setEditProgLevel(prog.level || 'UG');
+    setEditProgDuration(prog.duration_years || 3);
+    setEditProgSems(prog.total_semesters || 8);
+    setEditProgIntake(prog.intake_capacity || 60);
+    setShowEditProgModal(true);
+  }
+
+  async function handleUpdateProgSubmit(e) {
+    e.preventDefault();
+    if (!editingProg || !editProgName.trim() || !editProgCode.trim()) return;
+
+    setEditProgSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/admin/programs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingProg.id,
+          department_id: editProgDeptId,
+          name: editProgName.trim(),
+          code: editProgCode.trim().toUpperCase(),
+          level: editProgLevel,
+          duration_years: editProgDuration,
+          total_semesters: editProgSems,
+          intake_capacity: editProgIntake,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(`Degree Program "${editProgName}" updated successfully!`);
+        setShowEditProgModal(false);
+        setEditingProg(null);
+        loadAllData();
+      } else {
+        setErrorMsg(data.error || 'Failed to update academic program.');
+      }
+    } catch {
+      setErrorMsg('Network error while updating program.');
+    } finally {
+      setEditProgSubmitting(false);
     }
   }
 
@@ -1054,14 +1170,24 @@ export default function AdminPage() {
                             {isOffering ? '🎓 DEGREE-GRANTING' : '🤝 SUPPORTING / ALLIED'}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          title="Remove Department"
-                          onClick={() => handleDeleteDepartment(dept.id, dept.name)}
-                          className="btn-delete-item-sm"
-                        >
-                          <Trash2 size={13} /> Remove
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            title="Edit Department"
+                            onClick={() => openEditDeptModal(dept)}
+                            className="btn-edit-item-sm"
+                          >
+                            <FileEdit size={13} /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            title="Remove Department"
+                            onClick={() => handleDeleteDepartment(dept.id, dept.name)}
+                            className="btn-delete-item-sm"
+                          >
+                            <Trash2 size={13} /> Remove
+                          </button>
+                        </div>
                       </div>
                       <h3 className="dept-name">{dept.name}</h3>
                       <p className="dept-desc-text">{dept.description}</p>
@@ -1099,14 +1225,24 @@ export default function AdminPage() {
                                       <span className="prog-level-tag">{p.level}</span>
                                       <span className="prog-name-text">{p.name}</span>
                                     </div>
-                                    <button
-                                      type="button"
-                                      title="Remove Degree Program"
-                                      onClick={() => handleDeleteProgram(dept.id, p.id, p.name)}
-                                      className="btn-delete-prog-icon"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <button
+                                        type="button"
+                                        title="Edit Degree Program"
+                                        onClick={() => openEditProgModal(p, dept)}
+                                        className="btn-edit-prog-icon"
+                                      >
+                                        <FileEdit size={12} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        title="Remove Degree Program"
+                                        onClick={() => handleDeleteProgram(dept.id, p.id, p.name)}
+                                        className="btn-delete-prog-icon"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
                                   </div>
                                   <div className="prog-meta-sub" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -1338,6 +1474,196 @@ export default function AdminPage() {
                     </button>
                     <button type="submit" disabled={progSubmitting} className="btn-primary-action">
                       {progSubmitting ? 'Adding Program...' : 'Add Program'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Department Modal */}
+          {showEditDeptModal && editingDept && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowEditDeptModal(false); }}>
+              <div className="modal-card">
+                <div className="modal-header">
+                  <div className="modal-title-row">
+                    <FileEdit size={20} className="text-purple" />
+                    <h3>Edit Academic Department ({editingDept.code})</h3>
+                  </div>
+                  <button type="button" onClick={() => setShowEditDeptModal(false)} className="btn-close-modal">✕</button>
+                </div>
+
+                <form onSubmit={handleUpdateDeptSubmit} className="admin-form">
+                  <div className="form-group">
+                    <label className="form-label">Department Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Department of Botany"
+                      value={editDeptName}
+                      onChange={(e) => setEditDeptName(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Department Code *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. BOT, CS, ARABIC"
+                        value={editDeptCode}
+                        onChange={(e) => setEditDeptCode(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Department Type *</label>
+                      <select
+                        value={editDeptType}
+                        onChange={(e) => setEditDeptType(e.target.value)}
+                        className="form-select"
+                      >
+                        <option value="PROGRAM_OFFERING">🎓 Degree-Granting (Offers Majors)</option>
+                        <option value="SUPPORTING">🤝 Supporting / Allied / Languages</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Academic Description / Mission</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Brief summary of department's academic focus..."
+                      value={editDeptDesc}
+                      onChange={(e) => setEditDeptDesc(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">HoD / Faculty In-Charge Email</label>
+                    <input
+                      type="email"
+                      placeholder="hod.dept@college.edu"
+                      value={editDeptHod}
+                      onChange={(e) => setEditDeptHod(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" onClick={() => setShowEditDeptModal(false)} className="btn-cancel">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={editDeptSubmitting} className="btn-primary-action">
+                      {editDeptSubmitting ? 'Saving Changes...' : 'Save Department Changes'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Program Modal */}
+          {showEditProgModal && editingProg && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowEditProgModal(false); }}>
+              <div className="modal-card">
+                <div className="modal-header">
+                  <div className="modal-title-row">
+                    <FileEdit size={20} className="text-purple" />
+                    <h3>Edit Degree Program ({editingProg.code})</h3>
+                  </div>
+                  <button type="button" onClick={() => setShowEditProgModal(false)} className="btn-close-modal">✕</button>
+                </div>
+
+                <form onSubmit={handleUpdateProgSubmit} className="admin-form">
+                  <div className="form-group">
+                    <label className="form-label">Program Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. B.Sc Botany or M.Sc Botany"
+                      value={editProgName}
+                      onChange={(e) => setEditProgName(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Program Code *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. BSC_BOT, MSC_BOT"
+                        value={editProgCode}
+                        onChange={(e) => setEditProgCode(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Degree Level *</label>
+                      <select
+                        value={editProgLevel}
+                        onChange={(e) => setEditProgLevel(e.target.value)}
+                        className="form-select"
+                      >
+                        <option value="UG">Undergraduate (UG)</option>
+                        <option value="PG">Postgraduate (PG)</option>
+                        <option value="PHD">Doctoral (Ph.D)</option>
+                        <option value="DIPLOMA">Diploma</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Duration (Years)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={editProgDuration}
+                        onChange={(e) => setEditProgDuration(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Total Semesters</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={editProgSems}
+                        onChange={(e) => setEditProgSems(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Intake Capacity (Seats)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="500"
+                        value={editProgIntake}
+                        onChange={(e) => setEditProgIntake(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" onClick={() => setShowEditProgModal(false)} className="btn-cancel">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={editProgSubmitting} className="btn-primary-action">
+                      {editProgSubmitting ? 'Saving Changes...' : 'Save Program Changes'}
                     </button>
                   </div>
                 </form>

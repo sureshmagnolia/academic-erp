@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { listAllDepartments, createDepartment, deleteDepartment } from '@/lib/db';
+import { listAllDepartments, createDepartment, deleteDepartment, updateDepartment } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -32,6 +32,29 @@ export async function POST(req) {
   } catch (err) {
     console.error('Error creating department:', err);
     return NextResponse.json({ error: err.message || 'Failed to create department' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req) {
+  const session = await auth();
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.roles?.some((r) => r.code === 'ADMIN' || r.code === 'PRINCIPAL');
+
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized: Administrator or Principal privileges required' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { id, name, code, type, description, hod_email } = body;
+    if (!id) {
+      return NextResponse.json({ error: 'Department ID is required for editing' }, { status: 400 });
+    }
+
+    const department = await updateDepartment({ id, name, code, type, description, hod_email });
+    return NextResponse.json({ success: true, department });
+  } catch (err) {
+    console.error('Error updating department:', err);
+    return NextResponse.json({ error: err.message || 'Failed to update department' }, { status: 500 });
   }
 }
 

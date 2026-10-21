@@ -5335,6 +5335,44 @@ button, input, select, textarea {
   background: rgba(239, 68, 68, 0.15);
 }
 
+.btn-edit-item-sm {
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit-item-sm:hover {
+  background: rgba(99, 102, 241, 0.25);
+  color: #ffffff;
+  border-color: #818cf8;
+}
+
+.btn-edit-prog-icon {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.btn-edit-prog-icon:hover {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+}
+
 /* ------------------------------------------------------------- */
 /* FLOATING POPUP MODAL OVERLAY & POPUP CARD (FIXED POPUP)      */
 /* ------------------------------------------------------------- */
