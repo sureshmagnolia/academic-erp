@@ -320,7 +320,7 @@ function JoinEnrollmentContent() {
                 </>
               ) : (
                 <>
-                  <Send size={16} /> Submit Join Request to Superior
+                  <Send size={16} /> Submit Join Request
                 </>
               )}
             </button>
