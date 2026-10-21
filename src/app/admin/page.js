@@ -730,10 +730,13 @@ export default function AdminPage() {
         setSuccessMsg(`Candidate request ${action === 'APPROVE' ? 'approved & onboarding unlocked' : action.toLowerCase()}!`);
         loadAllData();
       } else {
-        setErrorMsg(data.error || 'Failed to review request.');
+        const msg = data.error || 'Failed to review request.';
+        setErrorMsg(msg);
+        alert(msg);
       }
     } catch (err) {
       setErrorMsg('Network error while processing join review.');
+      alert('Network error while processing join review.');
     } finally {
       setReviewSubmittingId(null);
     }
