@@ -60,6 +60,8 @@ import {
   SYSTEM_PRIVILEGES,
   ROLE_DEFAULT_PRIVILEGES,
   computeEffectivePrivileges,
+  SEAT_RESERVATION_CATEGORIES,
+  resolveSeatCategoryCode,
 } from '@/lib/constants';
 
 export default function AdminPage() {
@@ -93,6 +95,7 @@ export default function AdminPage() {
   const [ptaReceiptNo, setPtaReceiptNo] = useState('');
   const [ptaAmount, setPtaAmount] = useState('1850');
   const [officialAdmissionNo, setOfficialAdmissionNo] = useState('');
+  const [assignedCategories, setAssignedCategories] = useState({});
 
   // TC Issuance Modal
   const [showTcModal, setShowTcModal] = useState(false);
@@ -385,11 +388,18 @@ export default function AdminPage() {
     }
   }
 
-  // Create Academic Program under a Department
   async function handleProcessVerificationStep(email, step, verification_action) {
     setProcessingDossierEmail(email);
     setErrorMsg('');
     setSuccessMsg('');
+    const cand = admissionsDossiers.find((d) => d.user_email === email);
+    const assignedCatCode =
+      assignedCategories[email] ||
+      cand?.admitted_category ||
+      resolveSeatCategoryCode(cand?.admission_quota, cand?.actual_category || cand?.caste_name);
+    const matchedCategory = SEAT_RESERVATION_CATEGORIES.find((c) => c.code === assignedCatCode);
+    const assignedQuotaLabel = matchedCategory ? matchedCategory.name : assignedCatCode;
+
     try {
       const res = await fetch('/api/admissions/verify', {
         method: 'POST',
@@ -402,6 +412,8 @@ export default function AdminPage() {
           pta_receipt_no: ptaReceiptNo,
           pta_amount: ptaAmount,
           official_admission_no: officialAdmissionNo,
+          admitted_category: (step === 1 || step === 2) ? assignedCatCode : cand?.admitted_category || null,
+          admitted_quota: (step === 1 || step === 2) ? assignedQuotaLabel : cand?.admitted_quota || null,
         }),
       });
       const data = await res.json();
@@ -2037,9 +2049,16 @@ export default function AdminPage() {
                           <h4 className="dossier-name">{cand.full_name}</h4>
                           <span className="dossier-cap">{cand.cap_id || 'Direct Onboarding'} &bull; {cand.user_email}</span>
                         </div>
-                        <span className={`stage-badge ${isDept ? 'dept' : isNodal ? 'nodal' : isPta ? 'pta' : isPrincipal ? 'principal' : isTc ? 'tc' : 'admitted'}`}>
-                          {isDept ? 'Stage 1: Dept Level' : isNodal ? 'Stage 2: Nodal Desk' : isPta ? 'Stage 3: PTA Fee' : isPrincipal ? 'Stage 4: Principal' : isTc ? 'TC Issued (Alumni)' : 'Admitted Active'}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                          <span className={`stage-badge ${isDept ? 'dept' : isNodal ? 'nodal' : isPta ? 'pta' : isPrincipal ? 'principal' : isTc ? 'tc' : 'admitted'}`}>
+                            {isDept ? 'Stage 1: Dept Level' : isNodal ? 'Stage 2: Nodal Desk' : isPta ? 'Stage 3: PTA Fee' : isPrincipal ? 'Stage 4: Principal' : isTc ? 'TC Issued (Alumni)' : 'Admitted Active'}
+                          </span>
+                          {cand.admitted_category && (
+                            <span className="admitted-category-pill">
+                              Seat: [{cand.admitted_category}]
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="dossier-meta-grid">
@@ -2048,7 +2067,7 @@ export default function AdminPage() {
                           <span className="meta-field-val">{cand.program_name || cand.program_id}</span>
                         </div>
                         <div>
-                          <span className="meta-field-label">Quota Allotted</span>
+                          <span className="meta-field-label">Claimed Quota</span>
                           <span className="meta-field-val">{cand.admission_quota || 'Merit'}</span>
                         </div>
                         <div>
@@ -2069,8 +2088,41 @@ export default function AdminPage() {
                         </div>
                       </div>
 
+                      {/* Superior Admitted Category Assignment as per Seat Split-Up */}
+                      {(isDept || isNodal) && (
+                        <div className="admitted-category-assign-container">
+                          <div className="admitted-category-header">
+                            <div className="admitted-category-title">
+                              <SlidersHorizontal size={14} className="text-emerald" />
+                              <span>Admitted Category Allotment (Seat Split-up)</span>
+                            </div>
+                            <span className="admitted-category-hint">Institutional Seat Matrix</span>
+                          </div>
+                          <div className="admitted-category-body">
+                            <label className="admitted-category-lbl">
+                              Assign / Confirm Seat Category:
+                            </label>
+                            <select
+                              value={assignedCategories[cand.user_email] || cand.admitted_category || resolveSeatCategoryCode(cand.admission_quota, cand.actual_category || cand.caste_name)}
+                              onChange={(e) => setAssignedCategories({ ...assignedCategories, [cand.user_email]: e.target.value })}
+                              className="form-select admitted-category-select"
+                            >
+                              {SEAT_RESERVATION_CATEGORIES.map((cat) => (
+                                <option key={cat.code} value={cat.code}>
+                                  [{cat.code}] {cat.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="admitted-category-reconcile-note">
+                              <span className="note-label">Student Claimed:</span> <strong>{cand.admission_quota || 'Merit'}</strong> ({cand.community_category} &bull; {cand.caste_name || '-'})
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Verification Audit Log */}
                       <div style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        {cand.admitted_category && <div style={{ color: '#38bdf8', fontWeight: 600 }}>🏷 Verified Admitted Category: [{cand.admitted_category}] {cand.admitted_quota || ''}</div>}
                         {cand.dept_verified_by && <div style={{ color: '#34d399' }}>✓ Dept: {cand.dept_verified_by} ({cand.dept_notes || 'Approved'})</div>}
                         {cand.nodal_verified_by && <div style={{ color: '#38bdf8' }}>✓ Nodal: {cand.nodal_verified_by} ({cand.nodal_notes || 'Memo Checked'})</div>}
                         {cand.pta_verified_by && <div style={{ color: '#c084fc' }}>✓ PTA: Receipt #{cand.pta_receipt_no} (₹{cand.pta_amount})</div>}

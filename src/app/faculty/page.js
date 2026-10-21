@@ -33,7 +33,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import SeatMatrixModal from '@/components/SeatMatrixModal';
-import { DEPARTMENTS_CATALOG, SEAT_RESERVATION_CATEGORIES } from '@/lib/constants';
+import { DEPARTMENTS_CATALOG, SEAT_RESERVATION_CATEGORIES, resolveSeatCategoryCode } from '@/lib/constants';
 
 export default function FacultyPage() {
   const { data: session, status, update } = useSession();
@@ -56,6 +56,7 @@ export default function FacultyPage() {
   const [processingDossierEmail, setProcessingDossierEmail] = useState(null);
   const [deptDossierSearch, setDeptDossierSearch] = useState('');
   const [deptDossierNotes, setDeptDossierNotes] = useState({});
+  const [assignedCategories, setAssignedCategories] = useState({});
   
   // Courses & Curriculum State
   const [coursesList, setCoursesList] = useState([]);
@@ -134,6 +135,14 @@ export default function FacultyPage() {
 
   async function handleDeptVerify(email, action) {
     setProcessingDossierEmail(email);
+    const cand = deptDossiers.find((d) => d.user_email === email);
+    const assignedCatCode =
+      assignedCategories[email] ||
+      cand?.admitted_category ||
+      resolveSeatCategoryCode(cand?.admission_quota, cand?.actual_category || cand?.caste_name);
+    const matchedCategory = SEAT_RESERVATION_CATEGORIES.find((c) => c.code === assignedCatCode);
+    const assignedQuotaLabel = matchedCategory ? matchedCategory.name : assignedCatCode;
+
     try {
       const res = await fetch('/api/admissions/verify', {
         method: 'POST',
@@ -143,6 +152,8 @@ export default function FacultyPage() {
           step: 1,
           verification_action: action, // 'APPROVE' or 'REVISE'
           notes: deptDossierNotes[email] || '',
+          admitted_category: assignedCatCode,
+          admitted_quota: assignedQuotaLabel,
         }),
       });
       const data = await res.json();
@@ -803,7 +814,14 @@ export default function FacultyPage() {
                             <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{cand.user_email}</span>
                           </div>
                         </div>
-                        <span className="stage-badge pending">STAGE 1: DEPT PENDING</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                          <span className="stage-badge pending">STAGE 1: DEPT PENDING</span>
+                          {cand.admitted_category && (
+                            <span className="admitted-category-pill">
+                              Category: {cand.admitted_category}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="dossier-meta-grid">
@@ -816,7 +834,7 @@ export default function FacultyPage() {
                           <span className="meta-val">{cand.program_name || cand.program_code || 'UG Degree'}</span>
                         </div>
                         <div className="meta-box">
-                          <span className="meta-lbl">Allotted Quota</span>
+                          <span className="meta-lbl">Claimed Quota</span>
                           <span className="meta-val">{cand.admission_quota || 'General Merit'}</span>
                         </div>
                         <div className="meta-box">
@@ -830,6 +848,36 @@ export default function FacultyPage() {
                         <div className="meta-box">
                           <span className="meta-lbl">Candidate Mobile</span>
                           <span className="meta-val">{cand.mobile_number || 'N/A'}</span>
+                        </div>
+                      </div>
+
+                      {/* Superior Admitted Category Assignment as per Seat Split-Up */}
+                      <div className="admitted-category-assign-container">
+                        <div className="admitted-category-header">
+                          <div className="admitted-category-title">
+                            <SlidersHorizontal size={14} className="text-emerald" />
+                            <span>Admitted Category Allotment (Seat Split-up)</span>
+                          </div>
+                          <span className="admitted-category-hint">Institutional Seat Matrix</span>
+                        </div>
+                        <div className="admitted-category-body">
+                          <label className="admitted-category-lbl">
+                            Verify &amp; Assign Official Category:
+                          </label>
+                          <select
+                            value={assignedCategories[cand.user_email] || cand.admitted_category || resolveSeatCategoryCode(cand.admission_quota, cand.actual_category || cand.caste_name)}
+                            onChange={(e) => setAssignedCategories({ ...assignedCategories, [cand.user_email]: e.target.value })}
+                            className="form-select admitted-category-select"
+                          >
+                            {SEAT_RESERVATION_CATEGORIES.map((cat) => (
+                              <option key={cat.code} value={cat.code}>
+                                [{cat.code}] {cat.name}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="admitted-category-reconcile-note">
+                            <span className="note-label">Student Claimed:</span> <strong>{cand.admission_quota || 'General Merit'}</strong> &bull; <span className="note-label">Caste:</span> <strong>{cand.caste_name || cand.actual_category || 'General'}</strong>
+                          </div>
                         </div>
                       </div>
 

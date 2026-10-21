@@ -328,6 +328,8 @@ const memoryStore = {
       approved_by: 'sureshmagnolia@gmail.com',
       reviewer_notes: 'All certificates and qualifying marks verified against physical originals.',
       verification_stage: 'COMPLETED',
+      admitted_category: 'OPEN',
+      admitted_quota: 'Open Merit (All Applicants)',
       official_admission_no: 'ADM/2024/CS/001',
     },
     {
@@ -732,6 +734,8 @@ export async function initDb() {
       'is_ex_servicemen_ward BOOLEAN DEFAULT FALSE',
       'has_arts_festival_grade BOOLEAN DEFAULT FALSE',
       'sports_quota_level VARCHAR(100)',
+      'admitted_category VARCHAR(50)',
+      'admitted_quota VARCHAR(100)',
       "documents JSONB DEFAULT '{}'::jsonb"
     ];
 
@@ -886,6 +890,8 @@ export async function initDb() {
       await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS alumni_higher_studies TEXT;`;
       await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS alumni_city TEXT;`;
       await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS alumni_updated_at TIMESTAMP WITH TIME ZONE;`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS admitted_category VARCHAR(50);`;
+      await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS admitted_quota VARCHAR(100);`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS granted_privileges JSONB DEFAULT '[]'::jsonb;`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS revoked_privileges JSONB DEFAULT '[]'::jsonb;`;
       await sql`ALTER TABLE join_requests ADD COLUMN IF NOT EXISTS token_id INT;`;
@@ -2620,7 +2626,9 @@ export async function processAdmissionVerificationStep({
   notes = '',
   pta_receipt_no = '',
   pta_amount = 0,
-  official_admission_no = ''
+  official_admission_no = '',
+  admitted_category = null,
+  admitted_quota = null,
 }) {
   const cleanEmail = email.trim().toLowerCase();
   await initDb();
@@ -2663,6 +2671,8 @@ export async function processAdmissionVerificationStep({
               dept_verified_by = ${verified_by},
               dept_verified_at = CURRENT_TIMESTAMP,
               dept_notes = ${notes},
+              admitted_category = COALESCE(${admitted_category || null}, admitted_category),
+              admitted_quota = COALESCE(${admitted_quota || null}, admitted_quota),
               updated_at = CURRENT_TIMESTAMP
           WHERE LOWER(user_email) = ${cleanEmail}
           RETURNING *;
@@ -2676,6 +2686,8 @@ export async function processAdmissionVerificationStep({
               nodal_verified_by = ${verified_by},
               nodal_verified_at = CURRENT_TIMESTAMP,
               nodal_notes = ${notes},
+              admitted_category = COALESCE(${admitted_category || null}, admitted_category),
+              admitted_quota = COALESCE(${admitted_quota || null}, admitted_quota),
               updated_at = CURRENT_TIMESTAMP
           WHERE LOWER(user_email) = ${cleanEmail}
           RETURNING *;
@@ -2738,10 +2750,14 @@ export async function processAdmissionVerificationStep({
       prof.dept_verified_by = verified_by;
       prof.dept_verified_at = now;
       prof.dept_notes = notes;
+      if (admitted_category) prof.admitted_category = admitted_category;
+      if (admitted_quota) prof.admitted_quota = admitted_quota;
     } else if (step === 2 || step === 'NODAL_DESK') {
       prof.nodal_verified_by = verified_by;
       prof.nodal_verified_at = now;
       prof.nodal_notes = notes;
+      if (admitted_category) prof.admitted_category = admitted_category;
+      if (admitted_quota) prof.admitted_quota = admitted_quota;
     } else if (step === 3 || step === 'PTA_DESK') {
       prof.pta_verified_by = verified_by;
       prof.pta_verified_at = now;

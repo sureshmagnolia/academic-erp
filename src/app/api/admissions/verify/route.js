@@ -113,7 +113,7 @@ export async function POST(req) {
     }
 
     // 3. MULTI-STEP ADMISSION VERIFICATION (Steps 1 to 4)
-    const { step, verification_action, notes, pta_receipt_no, pta_amount, official_admission_no } = body;
+    const { step, verification_action, notes, pta_receipt_no, pta_amount, official_admission_no, admitted_category, admitted_quota } = body;
 
     // Check Role Permissions for each specific verification stage:
     if (step === 1 || step === 'DEPT_LEVEL') {
@@ -158,6 +158,8 @@ export async function POST(req) {
       pta_receipt_no: pta_receipt_no || '',
       pta_amount: pta_amount || 0,
       official_admission_no: official_admission_no || '',
+      admitted_category: admitted_category || null,
+      admitted_quota: admitted_quota || null,
     });
 
     return NextResponse.json({

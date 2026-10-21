@@ -446,7 +446,7 @@ export default function StudentPage() {
 
               <div className="profile-card-group">
                 <div className="group-title">
-                  <Heart size={15} /> Social & Reservations
+                  <Heart size={15} /> Social &amp; Reservations
                 </div>
                 <div className="prop-row">
                   <span className="prop-name">Religion:</span>
@@ -459,6 +459,16 @@ export default function StudentPage() {
                 <div className="prop-row">
                   <span className="prop-name">Sub-Caste:</span>
                   <span className="prop-val">{profile?.caste_name || 'Anglo-Indian'}</span>
+                </div>
+                <div className="prop-row">
+                  <span className="prop-name">Claimed Quota:</span>
+                  <span className="prop-val">{profile?.admission_quota || 'General Merit'}</span>
+                </div>
+                <div className="prop-row">
+                  <span className="prop-name">Admitted Category:</span>
+                  <span className="prop-val highlight" style={{ color: profile?.admitted_category ? '#38bdf8' : '#94a3b8', fontWeight: 600 }}>
+                    {profile?.admitted_category ? `[${profile.admitted_category}] ${profile.admitted_quota || ''}` : 'Under Superior Audit'}
+                  </span>
                 </div>
                 <div className="prop-row">
                   <span className="prop-name">Special Quotas:</span>

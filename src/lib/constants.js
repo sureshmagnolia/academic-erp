@@ -248,7 +248,47 @@ export const SEAT_RESERVATION_CATEGORIES = [
     badgeClass: 'badge-special',
     defaultPct: 0,
   },
+  {
+    code: 'MGT',
+    name: 'Management Quota (MGT)',
+    desc: 'Statutory institutional management quota allotment.',
+    isOpen: false,
+    badgeClass: 'badge-special',
+    defaultPct: 0,
+  },
+  {
+    code: 'COMM',
+    name: 'Community Quota (COMM)',
+    desc: 'Aided educational agency community reservation seats.',
+    isOpen: false,
+    badgeClass: 'badge-minority',
+    defaultPct: 0,
+  },
 ];
+
+/**
+ * Maps a student's claimed admission quota or community/caste into the matching
+ * standardized code defined in SEAT_RESERVATION_CATEGORIES.
+ */
+export function resolveSeatCategoryCode(claimedQuota = '', actualCategory = '') {
+  const text = `${claimedQuota || ''} ${actualCategory || ''}`.toUpperCase();
+  if (text.includes('MUSLIM') || text.includes('MU QUOTA')) return 'MU';
+  if (text.includes('EZHAVA') || text.includes('THIYYA') || text.includes('BILLAVA') || text.includes('ETB')) return 'ETB';
+  if (text.includes('SCHEDULED CASTE') || text.includes('SC QUOTA') || text.includes('SC ')) return 'SC';
+  if (text.includes('SCHEDULED TRIBE') || text.includes('ST QUOTA') || text.includes('ST ')) return 'ST';
+  if (text.includes('LATIN') || text.includes('LC/AI') || text.includes('LC QUOTA')) return 'LC';
+  if (text.includes('EWS') || text.includes('ECONOMICALLY WEAKER')) return 'EWS';
+  if (text.includes('OTHER BACKWARD HINDU') || text.includes('OBH')) return 'OBH';
+  if (text.includes('OTHER BACKWARD CHRISTIAN') || text.includes('OBX')) return 'OBX';
+  if (text.includes('TAMIL') || text.includes('TLM')) return 'TLM';
+  if (text.includes('SPORTS') || text.includes('SP QUOTA')) return 'SP';
+  if (text.includes('CULTURAL') || text.includes('ARTS') || text.includes('SSQ')) return 'SSQ';
+  if (text.includes('PWD') || text.includes('DIFFERENTLY') || text.includes('DISABILITY')) return 'PWD';
+  if (text.includes('LAKSHADWEEP') || text.includes('UTL')) return 'UTL';
+  if (text.includes('MANAGEMENT') || text.includes('MGT')) return 'MGT';
+  if (text.includes('COMMUNITY') || text.includes('COMM')) return 'COMM';
+  return 'OPEN';
+}
 
 // -------------------------------------------------------------
 // STUDENT MULTI-STEP ADMISSION VERIFICATION PIPELINE
