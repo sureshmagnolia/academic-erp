@@ -21,8 +21,12 @@ import {
   Send,
   ExternalLink,
   Save,
+  SlidersHorizontal,
+  AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
-import { DEPARTMENTS_CATALOG } from '@/lib/constants';
+import SeatMatrixModal from '@/components/SeatMatrixModal';
+import { DEPARTMENTS_CATALOG, SEAT_RESERVATION_CATEGORIES } from '@/lib/constants';
 
 export default function FacultyPage() {
   const { data: session, status } = useSession();
@@ -42,6 +46,7 @@ export default function FacultyPage() {
   const [departmentsList, setDepartmentsList] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
+  const [selectedProgForSeatMatrix, setSelectedProgForSeatMatrix] = useState(null);
   const [courseFilterDept, setCourseFilterDept] = useState('ALL');
   const filteredCourses = coursesList.filter((c) => courseFilterDept === 'ALL' || c.department_id === courseFilterDept);
 
@@ -331,6 +336,20 @@ export default function FacultyPage() {
                 <span className="sidebar-item-desc">Curriculum & syllabus</span>
               </div>
               <span className="sidebar-item-badge">{coursesList.length}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('seat_matrix')}
+              className={`sidebar-nav-item ${activeTab === 'seat_matrix' ? 'active' : ''}`}
+            >
+              <div className="sidebar-item-icon">
+                <SlidersHorizontal size={18} />
+              </div>
+              <div className="sidebar-item-info">
+                <span className="sidebar-item-title">Degree Programs & Seat Matrix</span>
+                <span className="sidebar-item-desc">Reservation quotas & intake</span>
+              </div>
+              <span className="sidebar-item-badge">{programsList.length}</span>
             </button>
 
             <button
@@ -652,6 +671,145 @@ export default function FacultyPage() {
         </div>
       )}
 
+      {/* ------------------------------------------------------------- */}
+      {/* TAB: DEGREE PROGRAMS & SEAT MATRIX */}
+      {/* ------------------------------------------------------------- */}
+      {activeTab === 'seat_matrix' && (
+        <div className="tab-section-content">
+          <div className="admin-card">
+            <div className="card-header" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                <SlidersHorizontal size={24} className="card-icon text-emerald" />
+                <div>
+                  <h3 className="card-title">Academic Degree Programs & Pre-Admission Seat Matrix</h3>
+                  <p className="card-desc">
+                    Configure statutory seat split-ups across OPEN merit and 14 reserved community/special quotas prior to fresh student onboarding. OPEN seats are open to all applicants, while reserved categories are restricted to designated social and economic quotas.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Department Programs Grid */}
+            {programsList.length === 0 ? (
+              <div className="empty-state-box">
+                <Building size={36} style={{ color: '#64748b' }} />
+                <p>No active degree programs found in the institutional catalog.</p>
+              </div>
+            ) : (
+              <div className="programs-seat-matrix-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                {programsList.map((prog) => {
+                  const dept = departmentsList.find((d) => d.id === prog.department_id);
+                  const matrix = prog.seat_matrix || {};
+                  const totalAllotted = Object.values(matrix).reduce((acc, v) => acc + (parseInt(v, 10) || 0), 0);
+                  const intake = parseInt(prog.intake_capacity, 10) || 0;
+                  const isBalanced = totalAllotted === intake && intake > 0;
+                  const isOver = totalAllotted > intake;
+                  const isZero = totalAllotted === 0;
+
+                  return (
+                    <div key={prog.id} className="program-seat-card" style={{ background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255, 255, 255, 0.09)', borderRadius: '14px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px', transition: 'all 0.2s ease' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="prog-level-tag">{prog.level}</span>
+                          <span className="dept-code-tag">{prog.code}</span>
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                          {dept?.name || prog.department_id}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '1.05rem', color: '#f8fafc', fontWeight: 700 }}>{prog.name}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#94a3b8', flexWrap: 'wrap' }}>
+                          <span>{prog.duration_years} Years ({prog.total_semesters} Semesters)</span>
+                          {prog.level === 'UG' && (
+                            <span className="fyugp-exit-badge" title="Four Year Undergraduate Programme with Exit Option">
+                              ⚡ FYUGP
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Seat Allocation Status Banner */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(2, 6, 23, 0.6)', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        <div>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Sanctioned Intake</span>
+                          <strong style={{ fontSize: '1.2rem', color: '#ffffff' }}>{intake} Seats</strong>
+                        </div>
+
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Allotted</span>
+                          {isBalanced ? (
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#34d399', background: 'rgba(16, 185, 129, 0.15)', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <CheckCircle size={12} /> {totalAllotted}/{intake} (Balanced)
+                            </span>
+                          ) : isOver ? (
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f87171', background: 'rgba(239, 68, 68, 0.15)', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <AlertCircle size={12} /> {totalAllotted}/{intake} (+{totalAllotted - intake})
+                            </span>
+                          ) : isZero ? (
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', background: 'rgba(148, 163, 184, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
+                              Not Configured
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fbbf24', background: 'rgba(245, 158, 11, 0.15)', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <AlertTriangle size={12} /> {totalAllotted}/{intake} ({intake - totalAllotted} left)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quota Chips Preview */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '2px' }}>
+                        {SEAT_RESERVATION_CATEGORIES.map((cat) => {
+                          const seats = matrix[cat.code] || 0;
+                          return (
+                            <span
+                              key={cat.code}
+                              title={`${cat.name}: ${seats} seats`}
+                              style={{
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                padding: '2px 6px',
+                                borderRadius: '5px',
+                                background: cat.isOpen
+                                  ? 'rgba(16, 185, 129, 0.2)'
+                                  : seats > 0
+                                  ? 'rgba(99, 102, 241, 0.15)'
+                                  : 'rgba(255, 255, 255, 0.04)',
+                                color: cat.isOpen
+                                  ? '#34d399'
+                                  : seats > 0
+                                  ? '#c7d2fe'
+                                  : '#64748b',
+                                border: '1px solid ' + (cat.isOpen ? 'rgba(16, 185, 129, 0.35)' : seats > 0 ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)'),
+                              }}
+                            >
+                              {cat.code}: {seats}
+                            </span>
+                          );
+                        })}
+                      </div>
+
+                      {/* Action Button */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProgForSeatMatrix({ ...prog, department_name: dept?.name })}
+                        className="btn-primary-action"
+                        style={{ marginTop: 'auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      >
+                        <SlidersHorizontal size={15} />
+                        Configure Seat Split-Up
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* TAB 3: ATTENDANCE */}
       {/* ------------------------------------------------------------- */}
       {activeTab === 'attendance' && (
@@ -919,6 +1077,19 @@ export default function FacultyPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Program Seat Matrix Modal */}
+      {selectedProgForSeatMatrix && (
+        <SeatMatrixModal
+          program={selectedProgForSeatMatrix}
+          onClose={() => setSelectedProgForSeatMatrix(null)}
+          onSaveSuccess={(progId, newSplit) => {
+            setProgramsList((prev) =>
+              prev.map((p) => (p.id === progId ? { ...p, seat_matrix: newSplit } : p))
+            );
+          }}
+        />
       )}
         </main>
       </div>

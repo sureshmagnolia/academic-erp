@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
-import { MASTER_ROLES, DEPARTMENTS_CATALOG, FORM_REFERENCE_DATA } from './constants';
+import { MASTER_ROLES, DEPARTMENTS_CATALOG, FORM_REFERENCE_DATA, SEAT_RESERVATION_CATEGORIES } from './constants.js';
 
-export { MASTER_ROLES, DEPARTMENTS_CATALOG, FORM_REFERENCE_DATA };
+export { MASTER_ROLES, DEPARTMENTS_CATALOG, FORM_REFERENCE_DATA, SEAT_RESERVATION_CATEGORIES };
 
 // In-Memory fallback store for environments without live Postgres credentials
 const memoryStore = {
@@ -23,11 +23,69 @@ const memoryStore = {
     { id: 'crs_cs_1b01', program_id: 'prog_bsc_cs', department_id: 'dept_comp_sci', code: 'CS1B01', name: 'Problem Solving & C Programming', semester: 1, course_type: 'CORE', credits: 3, hours_per_week: 4, description: 'Procedural problem solving, control structures, pointers, and file operations.', faculty_email: 'hod.cse@college.edu', is_active: true },
   ],
   academic_programs: [
-    { id: 'prog_bsc_bot', department_id: 'dept_botany', name: 'B.Sc Botany (Plant Science & Biotech) • FYUGP', code: 'BSC_BOT', level: 'UG', duration_years: 4, total_semesters: 8, exit_option: 'Exit at 3rd Year (Sem 6) with Major Degree', intake_capacity: 48, is_active: true },
-    { id: 'prog_msc_bot', department_id: 'dept_botany', name: 'M.Sc Botany', code: 'MSC_BOT', level: 'PG', duration_years: 2, total_semesters: 4, intake_capacity: 18, is_active: true },
-    { id: 'prog_bsc_cs', department_id: 'dept_comp_sci', name: 'B.Sc Computer Science • FYUGP', code: 'BSC_CS', level: 'UG', duration_years: 4, total_semesters: 8, exit_option: 'Exit at 3rd Year (Sem 6) with Major Degree', intake_capacity: 60, is_active: true },
-    { id: 'prog_msc_cs', department_id: 'dept_comp_sci', name: 'M.Sc Computer Science', code: 'MSC_CS', level: 'PG', duration_years: 2, total_semesters: 4, intake_capacity: 24, is_active: true },
-    { id: 'prog_bcom', department_id: 'dept_commerce', name: 'Bachelor of Commerce (B.Com) • FYUGP', code: 'BCOM', level: 'UG', duration_years: 4, total_semesters: 8, exit_option: 'Exit at 3rd Year (Sem 6) with Major Degree', intake_capacity: 80, is_active: true },
+    {
+      id: 'prog_bsc_bot',
+      department_id: 'dept_botany',
+      name: 'B.Sc Botany (Plant Science & Biotech) • FYUGP',
+      code: 'BSC_BOT',
+      level: 'UG',
+      duration_years: 4,
+      total_semesters: 8,
+      exit_option: 'Exit at 3rd Year (Sem 6) with Major Degree',
+      intake_capacity: 48,
+      seat_matrix: { OPEN: 24, ETB: 4, MU: 4, LC: 1, EWS: 5, OBH: 1, SC: 4, ST: 1, TLM: 1, SP: 1, SSQ: 1, PWD: 1, UTL: 0, OBX: 0, JR: 0 },
+      is_active: true
+    },
+    {
+      id: 'prog_msc_bot',
+      department_id: 'dept_botany',
+      name: 'M.Sc Botany',
+      code: 'MSC_BOT',
+      level: 'PG',
+      duration_years: 2,
+      total_semesters: 4,
+      intake_capacity: 18,
+      seat_matrix: { OPEN: 9, ETB: 1, MU: 2, LC: 1, EWS: 2, OBH: 0, SC: 2, ST: 0, TLM: 0, SP: 1, SSQ: 0, PWD: 0, UTL: 0, OBX: 0, JR: 0 },
+      is_active: true
+    },
+    {
+      id: 'prog_bsc_cs',
+      department_id: 'dept_comp_sci',
+      name: 'B.Sc Computer Science • FYUGP',
+      code: 'BSC_CS',
+      level: 'UG',
+      duration_years: 4,
+      total_semesters: 8,
+      exit_option: 'Exit at 3rd Year (Sem 6) with Major Degree',
+      intake_capacity: 60,
+      seat_matrix: { OPEN: 30, ETB: 5, MU: 5, LC: 2, EWS: 6, OBH: 2, SC: 5, ST: 1, TLM: 1, SP: 1, SSQ: 1, PWD: 1, UTL: 0, OBX: 0, JR: 0 },
+      is_active: true
+    },
+    {
+      id: 'prog_msc_cs',
+      department_id: 'dept_comp_sci',
+      name: 'M.Sc Computer Science',
+      code: 'MSC_CS',
+      level: 'PG',
+      duration_years: 2,
+      total_semesters: 4,
+      intake_capacity: 24,
+      seat_matrix: { OPEN: 12, ETB: 2, MU: 2, LC: 1, EWS: 2, OBH: 1, SC: 2, ST: 1, TLM: 0, SP: 1, SSQ: 0, PWD: 0, UTL: 0, OBX: 0, JR: 0 },
+      is_active: true
+    },
+    {
+      id: 'prog_bcom',
+      department_id: 'dept_commerce',
+      name: 'Bachelor of Commerce (B.Com) • FYUGP',
+      code: 'BCOM',
+      level: 'UG',
+      duration_years: 4,
+      total_semesters: 8,
+      exit_option: 'Exit at 3rd Year (Sem 6) with Major Degree',
+      intake_capacity: 80,
+      seat_matrix: { OPEN: 40, ETB: 7, MU: 6, LC: 3, EWS: 8, OBH: 2, SC: 7, ST: 2, TLM: 1, SP: 2, SSQ: 1, PWD: 1, UTL: 0, OBX: 0, JR: 0 },
+      is_active: true
+    },
   ],
   users: [
 
@@ -626,6 +684,24 @@ export async function initDb() {
         AND role_code = 'ADMIN'
       );
     `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS program_seat_matrix (
+        id SERIAL PRIMARY KEY,
+        program_id VARCHAR(100) NOT NULL,
+        category_code VARCHAR(20) NOT NULL,
+        seats INT NOT NULL DEFAULT 0,
+        updated_by VARCHAR(255),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(program_id, category_code)
+      );
+    `;
+
+    try {
+      await sql`ALTER TABLE academic_programs ADD COLUMN IF NOT EXISTS seat_matrix JSONB DEFAULT '{}'::jsonb;`;
+    } catch (colErr) {
+      // Safe fallback if column exists
+    }
 
     isInitialized = true;
   } catch (err) {
@@ -1648,6 +1724,7 @@ export async function listAllDepartments() {
                 'duration_years', p.duration_years,
                 'total_semesters', p.total_semesters,
                 'intake_capacity', p.intake_capacity,
+                'seat_matrix', COALESCE(p.seat_matrix, '{}'::jsonb),
                 'is_active', p.is_active
               )
             ) FILTER (WHERE p.id IS NOT NULL), '[]'
@@ -1948,4 +2025,112 @@ export async function deleteCourse(id) {
     memoryStore.courses = memoryStore.courses.filter(c => c.id !== id);
   }
   return true;
+}
+
+// -------------------------------------------------------------
+// SEAT MATRIX & RESERVATION QUOTA MANAGEMENT
+// -------------------------------------------------------------
+
+export async function getProgramSeatMatrix(programId) {
+  await initDb();
+  const sql = getSql();
+  let program = null;
+
+  if (sql) {
+    try {
+      const progRows = await sql`SELECT * FROM academic_programs WHERE id = ${programId}`;
+      if (progRows && progRows.length > 0) {
+        program = progRows[0];
+      }
+    } catch (err) {
+      console.error('getProgramSeatMatrix sql error:', err);
+    }
+  }
+
+  if (!program) {
+    program = (memoryStore.academic_programs || []).find((p) => p.id === programId);
+  }
+
+  if (!program) {
+    throw new Error(`Academic degree program '${programId}' not found`);
+  }
+
+  // Load seat matrix
+  let matrix = program.seat_matrix || {};
+  if (sql) {
+    try {
+      const rows = await sql`SELECT category_code, seats FROM program_seat_matrix WHERE program_id = ${programId}`;
+      if (rows && rows.length > 0) {
+        const dbMatrix = {};
+        rows.forEach(r => { dbMatrix[r.category_code] = r.seats; });
+        matrix = { ...matrix, ...dbMatrix };
+      }
+    } catch (err) {
+      console.error('Error fetching program_seat_matrix rows:', err);
+    }
+  }
+
+  // Ensure all 15 categories exist in response
+  const completeMatrix = {};
+  SEAT_RESERVATION_CATEGORIES.forEach(cat => {
+    completeMatrix[cat.code] = typeof matrix[cat.code] === 'number' ? matrix[cat.code] : (parseInt(matrix[cat.code], 10) || 0);
+  });
+
+  const totalAllotted = Object.values(completeMatrix).reduce((sum, v) => sum + (parseInt(v, 10) || 0), 0);
+  const intakeCapacity = parseInt(program.intake_capacity, 10) || 0;
+
+  return {
+    program,
+    seat_matrix: completeMatrix,
+    totalAllotted,
+    intake_capacity: intakeCapacity,
+    balance: intakeCapacity - totalAllotted,
+    categories: SEAT_RESERVATION_CATEGORIES
+  };
+}
+
+export async function updateProgramSeatMatrix(programId, splitup = {}, updatedBy = 'system') {
+  await initDb();
+  const sql = getSql();
+
+  // Validate all values are non-negative numbers
+  const sanitized = {};
+  for (const cat of SEAT_RESERVATION_CATEGORIES) {
+    const rawVal = splitup[cat.code];
+    const val = parseInt(rawVal, 10);
+    sanitized[cat.code] = isNaN(val) || val < 0 ? 0 : val;
+  }
+
+  const totalAllotted = Object.values(sanitized).reduce((sum, v) => sum + v, 0);
+
+  if (sql) {
+    try {
+      await sql`
+        UPDATE academic_programs 
+        SET seat_matrix = ${JSON.stringify(sanitized)}::jsonb
+        WHERE id = ${programId}
+      `;
+
+      for (const [catCode, seats] of Object.entries(sanitized)) {
+        await sql`
+          INSERT INTO program_seat_matrix (program_id, category_code, seats, updated_by, updated_at)
+          VALUES (${programId}, ${catCode}, ${seats}, ${updatedBy}, CURRENT_TIMESTAMP)
+          ON CONFLICT (program_id, category_code) DO UPDATE SET
+            seats = EXCLUDED.seats,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = CURRENT_TIMESTAMP
+        `;
+      }
+    } catch (err) {
+      console.error('updateProgramSeatMatrix sql error:', err);
+    }
+  }
+
+  // Update memoryStore
+  const progIdx = (memoryStore.academic_programs || []).findIndex(p => p.id === programId);
+  if (progIdx >= 0) {
+    memoryStore.academic_programs[progIdx].seat_matrix = sanitized;
+  }
+
+  return await getProgramSeatMatrix(programId);
 }

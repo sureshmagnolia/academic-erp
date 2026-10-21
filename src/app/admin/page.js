@@ -36,8 +36,10 @@ import {
   ToggleLeft,
   ToggleRight,
   Filter,
+  SlidersHorizontal,
 } from 'lucide-react';
 import QRCodeSvg from '@/components/QRCodeSvg';
+import SeatMatrixModal from '@/components/SeatMatrixModal';
 import { MASTER_ROLES, DEPARTMENTS_CATALOG } from '@/lib/constants';
 
 export default function AdminPage() {
@@ -56,6 +58,7 @@ export default function AdminPage() {
   const [showAddDeptModal, setShowAddDeptModal] = useState(false);
   const [showAddProgModal, setShowAddProgModal] = useState(false);
   const [targetDeptForProg, setTargetDeptForProg] = useState(null);
+  const [selectedProgForSeatMatrix, setSelectedProgForSeatMatrix] = useState(null);
 
   // New Department Form
   const [newDeptName, setNewDeptName] = useState('');
@@ -745,15 +748,31 @@ export default function AdminPage() {
                                       <Trash2 size={12} />
                                     </button>
                                   </div>
-                                  <div className="prog-meta-sub">
-                                    <span>{p.duration_years} Years ({p.total_semesters} Sems)</span>
-                                    {p.level === 'UG' && (
-                                      <span className="fyugp-exit-badge" title="Four Year Undergraduate Programme with Exit Option at 3rd Year">
-                                        ⚡ FYUGP (Exit at 3rd Yr)
-                                      </span>
-                                    )}
-                                    <span>&bull;</span>
-                                    <span>Intake: <strong>{p.intake_capacity}</strong> Seats</span>
+                                  <div className="prog-meta-sub" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                      <span>{p.duration_years} Years ({p.total_semesters} Sems)</span>
+                                      {p.level === 'UG' && (
+                                        <span className="fyugp-exit-badge" title="Four Year Undergraduate Programme with Exit Option at 3rd Year">
+                                          ⚡ FYUGP (Exit at 3rd Yr)
+                                        </span>
+                                      )}
+                                      <span>&bull;</span>
+                                      <span>Intake: <strong>{p.intake_capacity}</strong> Seats</span>
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedProgForSeatMatrix({ ...p, department_id: dept.id, department_name: dept.name })}
+                                      className="btn-seat-matrix-sm"
+                                      title="Configure Pre-Admission Quota Seat Matrix"
+                                    >
+                                      <SlidersHorizontal size={12} />
+                                      <span>Seat Matrix {(() => {
+                                        if (!p.seat_matrix) return '';
+                                        const tot = Object.values(p.seat_matrix).reduce((acc, v) => acc + (parseInt(v, 10) || 0), 0);
+                                        return tot > 0 ? `(${tot}/${p.intake_capacity})` : '(Configure)';
+                                      })()}</span>
+                                    </button>
                                   </div>
                                 </div>
                               ))}
@@ -964,6 +983,24 @@ export default function AdminPage() {
                 </form>
               </div>
             </div>
+          )}
+
+          {/* Seat Matrix Modal */}
+          {selectedProgForSeatMatrix && (
+            <SeatMatrixModal
+              program={selectedProgForSeatMatrix}
+              onClose={() => setSelectedProgForSeatMatrix(null)}
+              onSaveSuccess={(progId, newSplit) => {
+                setDepartmentsList((prev) =>
+                  prev.map((d) => ({
+                    ...d,
+                    programs: (d.programs || []).map((prog) =>
+                      prog.id === progId ? { ...prog, seat_matrix: newSplit } : prog
+                    ),
+                  }))
+                );
+              }}
+            />
           )}
         </div>
       )}
