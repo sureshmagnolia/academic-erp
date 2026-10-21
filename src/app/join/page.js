@@ -18,6 +18,7 @@ import {
   Hash,
   Send,
   Sparkles,
+  Lock,
 } from 'lucide-react';
 import { DEPARTMENTS_CATALOG } from '@/lib/constants';
 
@@ -38,10 +39,20 @@ function JoinEnrollmentContent() {
   const [admissionNo, setAdmissionNo] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [batchId, setBatchId] = useState('');
+  const [departmentsList, setDepartmentsList] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [existingRequest, setExistingRequest] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/admin/departments')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.departments) setDepartmentsList(data.departments);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (session?.user?.name) {
@@ -77,9 +88,22 @@ function JoinEnrollmentContent() {
         const res = await fetch(`/api/admin/enrollment-tokens?token=${encodeURIComponent(tokenString)}`);
         const data = await res.json();
         if (res.ok && data.token) {
-          setTokenData(data.token);
-          setDepartmentId(data.token.department_id || '');
-          setBatchId(data.token.batch_id || '');
+          const t = data.token;
+          if (!t.is_active) {
+            setTokenError('This department enrollment link has been deactivated by the superior.');
+            return;
+          }
+          if (new Date(t.expires_at) < new Date()) {
+            setTokenError(`This department enrollment link expired on ${new Date(t.expires_at).toLocaleString()}. Please contact your Department Superior to extend its validity.`);
+            return;
+          }
+          if (t.used_count >= t.max_uses) {
+            setTokenError('This department enrollment link has reached its maximum applicant scan capacity.');
+            return;
+          }
+          setTokenData(t);
+          setDepartmentId(t.department_id || '');
+          setBatchId(t.batch_id || '');
         } else {
           setTokenError(data.error || 'Invalid or inactive enrollment token.');
         }
@@ -138,7 +162,15 @@ function JoinEnrollmentContent() {
     }
   }
 
-  const deptMeta = DEPARTMENTS_CATALOG.find((d) => d.id === departmentId);
+  const allDepts = departmentsList.length > 0 ? departmentsList : DEPARTMENTS_CATALOG;
+  const deptMeta = allDepts.find((d) => d.id === departmentId || d.code === departmentId);
+  const availablePrograms = deptMeta?.programs || [];
+
+  useEffect(() => {
+    if (!batchId && availablePrograms.length > 0) {
+      setBatchId(availablePrograms[0].name || availablePrograms[0].id);
+    }
+  }, [availablePrograms, batchId]);
 
   return (
     <div className="join-page-wrapper">
@@ -168,7 +200,7 @@ function JoinEnrollmentContent() {
             <div>
               <strong>Authorized Program:</strong> {tokenData.title}
               <div className="token-submeta">
-                Role: <strong>{tokenData.target_role}</strong> | Dept: <strong>{deptMeta?.name || tokenData.department_id}</strong>
+                Role: <strong>{tokenData.target_role}</strong> | Dept: <strong>{deptMeta?.name || tokenData.department_id}</strong> | Valid Till: <strong>{new Date(tokenData.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
               </div>
             </div>
           </div>
@@ -293,24 +325,68 @@ function JoinEnrollmentContent() {
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">
-                  <Building size={15} /> Department
-                </label>
-                <select
-                  required
-                  value={departmentId}
-                  onChange={(e) => setDepartmentId(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">-- Choose Academic Department --</option>
-                  {DEPARTMENTS_CATALOG.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Department: Strictly locked to token's designated department */}
+              {tokenData?.department_id ? (
+                <div className="form-group full-width">
+                  <label className="form-label">
+                    <Building size={15} /> Designated Academic Department
+                  </label>
+                  <div className="locked-dept-card">
+                    <div className="locked-dept-header">
+                      <div className="locked-badge-pill">
+                        <Lock size={12} /> Pre-assigned by QR / Activation Link
+                      </div>
+                      <span className="locked-dept-code">{deptMeta?.code || tokenData.department_id}</span>
+                    </div>
+                    <h3 className="locked-dept-title">{deptMeta?.name || tokenData.department_id}</h3>
+                    <p className="locked-dept-subtitle">
+                      This enrollment link is strictly restricted to this department. Verification will be handled by the Department Superior.
+                    </p>
+                  </div>
+                  <input type="hidden" name="department_id" value={departmentId} />
+                </div>
+              ) : (
+                <div className="form-group full-width">
+                  <label className="form-label">
+                    <Building size={15} /> Department *
+                  </label>
+                  <select
+                    required
+                    value={departmentId}
+                    onChange={(e) => setDepartmentId(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="">-- Choose Academic Department --</option>
+                    {allDepts.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Conferred Degree Programs dropdown (if offering department) */}
+              {availablePrograms.length > 0 && (
+                <div className="form-group full-width">
+                  <label className="form-label">
+                    <GraduationCap size={15} /> Degree Program *
+                  </label>
+                  <select
+                    required
+                    value={batchId}
+                    onChange={(e) => setBatchId(e.target.value)}
+                    className="form-select"
+                  >
+                    {availablePrograms.map((p) => (
+                      <option key={p.id} value={p.name}>
+                        {p.name} ({p.level} &bull; {p.duration_years} Years &bull; {p.total_semesters} Semesters)
+                      </option>
+                    ))}
+                  </select>
+                  <span className="input-hint">Select the degree program you are applying for in this department.</span>
+                </div>
+              )}
             </div>
 
             <button type="submit" disabled={isSubmitting} className="btn-submit-join">

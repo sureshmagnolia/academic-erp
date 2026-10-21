@@ -47,9 +47,9 @@ export async function POST(req) {
       admission_or_emp_no,
     } = body;
 
-    if (!applicant_email || !applicant_name || !department_id) {
-      return NextResponse.json({ error: 'Email, Name, and Department are required' }, { status: 400 });
-    }
+    let finalDeptId = department_id;
+    let finalRole = requested_role || 'STUDENT';
+    let finalBatchId = batch_id;
 
     // Verify token if provided
     let tokenId = null;
@@ -65,6 +65,20 @@ export async function POST(req) {
         return NextResponse.json({ error: 'Maximum enrollment limit reached for this QR / Link' }, { status: 400 });
       }
       tokenId = tokenRec.id;
+      // Strictly bind candidate to the token's configured department and role
+      if (tokenRec.department_id) {
+        finalDeptId = tokenRec.department_id;
+      }
+      if (tokenRec.target_role) {
+        finalRole = tokenRec.target_role;
+      }
+      if (tokenRec.batch_id && !finalBatchId) {
+        finalBatchId = tokenRec.batch_id;
+      }
+    }
+
+    if (!applicant_email || !applicant_name || !finalDeptId) {
+      return NextResponse.json({ error: 'Email, Name, and Department are required' }, { status: 400 });
     }
 
     const created = await createJoinRequest({
@@ -73,9 +87,9 @@ export async function POST(req) {
       applicant_name,
       applicant_avatar,
       mobile_number,
-      requested_role: requested_role || 'STUDENT',
-      department_id,
-      batch_id,
+      requested_role: finalRole,
+      department_id: finalDeptId,
+      batch_id: finalBatchId,
       admission_or_emp_no,
     });
 

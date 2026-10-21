@@ -1167,10 +1167,13 @@ export async function createEnrollmentToken({
   batch_id,
   max_uses = 100,
   expires_hours = 72,
+  expires_at,
   created_by,
 }) {
   const token = 'enr_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
-  const expiresAt = new Date(Date.now() + expires_hours * 3600000).toISOString();
+  const expiresAt = expires_at
+    ? new Date(expires_at).toISOString()
+    : new Date(Date.now() + (parseInt(expires_hours, 10) || 72) * 3600000).toISOString();
   await initDb();
   const sql = getSql();
 
@@ -1230,16 +1233,39 @@ export async function getEnrollmentToken(tokenString) {
   return memoryStore.enrollment_tokens.find((t) => t.token === tokenString) || null;
 }
 
-export async function toggleEnrollmentToken(tokenId, isActive) {
+export async function updateEnrollmentToken(tokenId, updates = {}) {
   await initDb();
   const sql = getSql();
+  const id = Number(tokenId);
   if (sql) {
-    await sql`UPDATE enrollment_tokens SET is_active = ${isActive} WHERE id = ${tokenId}`;
-    return true;
+    if (updates.expires_at !== undefined) {
+      await sql`UPDATE enrollment_tokens SET expires_at = ${updates.expires_at} WHERE id = ${id}`;
+    }
+    if (updates.is_active !== undefined) {
+      await sql`UPDATE enrollment_tokens SET is_active = ${updates.is_active} WHERE id = ${id}`;
+    }
+    if (updates.max_uses !== undefined) {
+      await sql`UPDATE enrollment_tokens SET max_uses = ${Number(updates.max_uses)} WHERE id = ${id}`;
+    }
+    if (updates.title !== undefined) {
+      await sql`UPDATE enrollment_tokens SET title = ${updates.title} WHERE id = ${id}`;
+    }
+    const rows = await sql`SELECT * FROM enrollment_tokens WHERE id = ${id} LIMIT 1`;
+    return rows[0] || null;
   }
-  const token = memoryStore.enrollment_tokens.find((t) => t.id === Number(tokenId));
-  if (token) token.is_active = isActive;
-  return true;
+
+  const token = memoryStore.enrollment_tokens.find((t) => t.id === id);
+  if (token) {
+    if (updates.expires_at !== undefined) token.expires_at = updates.expires_at;
+    if (updates.is_active !== undefined) token.is_active = updates.is_active;
+    if (updates.max_uses !== undefined) token.max_uses = Number(updates.max_uses);
+    if (updates.title !== undefined) token.title = updates.title;
+  }
+  return token || null;
+}
+
+export async function toggleEnrollmentToken(tokenId, isActive) {
+  return updateEnrollmentToken(tokenId, { is_active: isActive });
 }
 
 // -------------------------------------------------------------

@@ -4,6 +4,7 @@ import {
   listEnrollmentTokens,
   createEnrollmentToken,
   toggleEnrollmentToken,
+  updateEnrollmentToken,
   getEnrollmentToken,
 } from '@/lib/db';
 
@@ -42,7 +43,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { title, target_role, department_id, batch_id, max_uses, expires_hours } = body;
+    const { title, target_role, department_id, batch_id, max_uses, expires_hours, expires_at } = body;
 
     if (!title || !department_id) {
       return NextResponse.json({ error: 'Title and Department are required' }, { status: 400 });
@@ -55,6 +56,7 @@ export async function POST(req) {
       batch_id: batch_id || null,
       max_uses: parseInt(max_uses, 10) || 100,
       expires_hours: parseInt(expires_hours, 10) || 72,
+      expires_at: expires_at || null,
       created_by: session.user.email,
     });
 
@@ -76,14 +78,36 @@ export async function PATCH(req) {
 
   try {
     const body = await req.json();
-    const { tokenId, isActive } = body;
+    const { tokenId, isActive, expiresAt, additionalHours, maxUses } = body;
 
-    if (!tokenId || isActive === undefined) {
-      return NextResponse.json({ error: 'Token ID and active status required' }, { status: 400 });
+    if (!tokenId) {
+      return NextResponse.json({ error: 'Token ID is required' }, { status: 400 });
     }
 
-    await toggleEnrollmentToken(tokenId, isActive);
-    return NextResponse.json({ success: true });
+    let finalExpiresAt = expiresAt ? new Date(expiresAt).toISOString() : undefined;
+    if (!finalExpiresAt && additionalHours) {
+      const existing = await getEnrollmentToken(tokenId);
+      const base = existing && new Date(existing.expires_at) > new Date() ? new Date(existing.expires_at) : new Date();
+      finalExpiresAt = new Date(base.getTime() + parseInt(additionalHours, 10) * 3600000).toISOString();
+    }
+
+    const updates = {};
+    if (finalExpiresAt !== undefined) {
+      updates.expires_at = finalExpiresAt;
+      // Extending validity re-activates the token unless specifically deactivated
+      if (isActive === undefined) {
+        updates.is_active = true;
+      }
+    }
+    if (isActive !== undefined) {
+      updates.is_active = isActive;
+    }
+    if (maxUses !== undefined) {
+      updates.max_uses = parseInt(maxUses, 10);
+    }
+
+    const updated = await updateEnrollmentToken(tokenId, updates);
+    return NextResponse.json({ success: true, token: updated });
   } catch (err) {
     console.error('Error updating enrollment token:', err);
     return NextResponse.json({ error: 'Failed to update token' }, { status: 500 });

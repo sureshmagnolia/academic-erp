@@ -27,6 +27,8 @@ import {
   Microscope,
   Award,
   QrCode,
+  Calendar,
+  CalendarPlus,
   FileEdit,
   Clock,
   ExternalLink,
@@ -141,9 +143,24 @@ export default function AdminPage() {
   const [tokenDept, setTokenDept] = useState('dept_comp_sci');
   const [tokenBatch, setTokenBatch] = useState('batch_bsc_cs_2024');
   const [tokenMaxUses, setTokenMaxUses] = useState(60);
+  const [tokenValidityMode, setTokenValidityMode] = useState('date'); // 'date' | 'preset'
+  const [tokenExpiryDate, setTokenExpiryDate] = useState(() => {
+    const d = new Date(Date.now() + 14 * 86400000);
+    return d.toISOString().split('T')[0];
+  });
+  const [tokenExpiryTime, setTokenExpiryTime] = useState('23:59');
   const [tokenExpiresHours, setTokenExpiresHours] = useState(72);
   const [tokenSubmitting, setTokenSubmitting] = useState(false);
   const [copiedToken, setCopiedToken] = useState(null);
+
+  // Extend Token Validity Modal State
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [extendTargetToken, setExtendTargetToken] = useState(null);
+  const [extendNewDate, setExtendNewDate] = useState('');
+  const [extendNewTime, setExtendNewTime] = useState('23:59');
+  const [extendMaxUses, setExtendMaxUses] = useState(100);
+  const [extendReactivate, setExtendReactivate] = useState(true);
+  const [extendSubmitting, setExtendSubmitting] = useState(false);
 
   // 2. Join Requests State
   const [joinRequests, setJoinRequests] = useState([]);
@@ -567,6 +584,10 @@ export default function AdminPage() {
     setErrorMsg('');
     setSuccessMsg('');
     try {
+      const expiresAtPayload = tokenValidityMode === 'date' && tokenExpiryDate
+        ? new Date(`${tokenExpiryDate}T${tokenExpiryTime || '23:59'}:00`).toISOString()
+        : undefined;
+
       const res = await fetch('/api/admin/enrollment-tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -577,6 +598,7 @@ export default function AdminPage() {
           batch_id: tokenBatch,
           max_uses: tokenMaxUses,
           expires_hours: tokenExpiresHours,
+          expires_at: expiresAtPayload,
         }),
       });
       const data = await res.json();
@@ -591,6 +613,66 @@ export default function AdminPage() {
       setErrorMsg('Network error while activating token.');
     } finally {
       setTokenSubmitting(false);
+    }
+  }
+
+  // Open Extend Validity Modal
+  function handleOpenExtendModal(token) {
+    setExtendTargetToken(token);
+    const base = new Date(token.expires_at) > new Date() ? new Date(token.expires_at) : new Date();
+    const future = new Date(base.getTime() + 14 * 86400000);
+    setExtendNewDate(future.toISOString().split('T')[0]);
+    setExtendNewTime('23:59');
+    setExtendMaxUses(token.max_uses || 100);
+    setExtendReactivate(true);
+    setShowExtendModal(true);
+  }
+
+  // Quick preset extension helper
+  function handleApplyExtendPreset(days) {
+    const base = extendTargetToken && new Date(extendTargetToken.expires_at) > new Date()
+      ? new Date(extendTargetToken.expires_at)
+      : new Date();
+    const newTarget = new Date(base.getTime() + days * 86400000);
+    setExtendNewDate(newTarget.toISOString().split('T')[0]);
+    setExtendNewTime('23:59');
+  }
+
+  // Save Extended Validity
+  async function handleSaveExtendValidity(e) {
+    e.preventDefault();
+    if (!extendTargetToken || !extendNewDate) return;
+    setExtendSubmitting(true);
+    setErrorMsg('');
+    try {
+      const newExpiresAt = new Date(`${extendNewDate}T${extendNewTime || '23:59'}:00`).toISOString();
+      const res = await fetch('/api/admin/enrollment-tokens', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenId: extendTargetToken.id,
+          expiresAt: newExpiresAt,
+          isActive: extendReactivate ? true : extendTargetToken.is_active,
+          maxUses: extendMaxUses,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTokens(tokens.map((t) => (t.id === extendTargetToken.id ? {
+          ...t,
+          expires_at: newExpiresAt,
+          is_active: extendReactivate ? true : t.is_active,
+          max_uses: Number(extendMaxUses),
+        } : t)));
+        setShowExtendModal(false);
+        setSuccessMsg(`Validity for "${extendTargetToken.title}" extended until ${new Date(newExpiresAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}!`);
+      } else {
+        setErrorMsg(data.error || 'Failed to extend token validity.');
+      }
+    } catch (err) {
+      setErrorMsg('Network error while extending token validity.');
+    } finally {
+      setExtendSubmitting(false);
     }
   }
 
@@ -2166,18 +2248,65 @@ export default function AdminPage() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Validity Window</label>
-                    <select
-                      value={tokenExpiresHours}
-                      onChange={(e) => setTokenExpiresHours(e.target.value)}
-                      className="form-select"
-                    >
-                      <option value="2">2 Hours (On-Spot Event)</option>
-                      <option value="24">24 Hours (1 Day)</option>
-                      <option value="72">72 Hours (3 Days)</option>
-                      <option value="168">7 Days (1 Week)</option>
-                      <option value="720">30 Days (Full Month)</option>
-                    </select>
+                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Validity Cut-off Date *</span>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Can extend later</span>
+                    </label>
+
+                    <div className="validity-mode-toggle">
+                      <button
+                        type="button"
+                        onClick={() => setTokenValidityMode('date')}
+                        className={`validity-mode-btn ${tokenValidityMode === 'date' ? 'active' : ''}`}
+                      >
+                        <Calendar size={13} /> Fixed Cut-off Date
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTokenValidityMode('preset')}
+                        className={`validity-mode-btn ${tokenValidityMode === 'preset' ? 'active' : ''}`}
+                      >
+                        <Clock size={13} /> Preset Duration
+                      </button>
+                    </div>
+
+                    {tokenValidityMode === 'date' ? (
+                      <div className="form-row" style={{ marginTop: '0.35rem' }}>
+                        <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
+                          <input
+                            type="date"
+                            required
+                            min={new Date().toISOString().split('T')[0]}
+                            value={tokenExpiryDate}
+                            onChange={(e) => setTokenExpiryDate(e.target.value)}
+                            className="form-input"
+                          />
+                        </div>
+                        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                          <input
+                            type="time"
+                            value={tokenExpiryTime}
+                            onChange={(e) => setTokenExpiryTime(e.target.value)}
+                            className="form-input"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <select
+                        value={tokenExpiresHours}
+                        onChange={(e) => setTokenExpiresHours(e.target.value)}
+                        className="form-select"
+                      >
+                        <option value="2">2 Hours (On-Spot Event)</option>
+                        <option value="24">24 Hours (1 Day)</option>
+                        <option value="72">72 Hours (3 Days)</option>
+                        <option value="168">7 Days (1 Week)</option>
+                        <option value="360">15 Days (Fortnight)</option>
+                        <option value="720">30 Days (Full Month)</option>
+                        <option value="1440">60 Days (2 Months)</option>
+                        <option value="2160">90 Days (Full Quarter)</option>
+                      </select>
+                    )}
                   </div>
                 </div>
 
@@ -2250,8 +2379,10 @@ export default function AdminPage() {
                               </span>
                             </div>
                             <div className="token-stat">
-                              <span className="stat-label">Expires At:</span>
-                              <span className="stat-val">{new Date(t.expires_at).toLocaleString()}</span>
+                              <span className="stat-label">Valid Until:</span>
+                              <span className="stat-val" style={{ color: isExpired ? '#f87171' : 'inherit' }}>
+                                {new Date(t.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
                             </div>
 
                             <div className="token-url-box">
@@ -2262,6 +2393,18 @@ export default function AdminPage() {
                                 title="Copy Enrollment Link"
                               >
                                 {copiedToken === t.token ? <Check size={16} className="text-green" /> : <Copy size={16} />}
+                              </button>
+                            </div>
+
+                            <div className="token-actions-row">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenExtendModal(t)}
+                                className="btn-extend-validity"
+                                title="Extend URL validity cut-off date"
+                              >
+                                <CalendarPlus size={14} />
+                                <span>Extend Validity</span>
                               </button>
                             </div>
                           </div>
@@ -3097,6 +3240,133 @@ export default function AdminPage() {
                 Close Matrix Catalog
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Extend Token Validity Modal */}
+      {showExtendModal && extendTargetToken && (
+        <div className="modal-overlay" onClick={() => setShowExtendModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <div className="modal-title-row">
+                <CalendarPlus size={22} className="text-indigo" />
+                <div>
+                  <h3 style={{ margin: 0 }}>Extend URL Validity</h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
+                    Update cut-off date and scan capacity for <strong>{extendTargetToken.title}</strong>
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setShowExtendModal(false)} className="btn-close-modal">&times;</button>
+            </div>
+
+            <form onSubmit={handleSaveExtendValidity} className="admin-form">
+              <div className="current-token-banner" style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                padding: '0.85rem 1rem',
+                marginBottom: '1rem',
+                fontSize: '0.85rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Target Department:</span>
+                  <strong>{DEPARTMENTS_CATALOG.find((d) => d.id === extendTargetToken.department_id)?.name || extendTargetToken.department_id}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Current Status:</span>
+                  <span className={`badge status ${new Date(extendTargetToken.expires_at) < new Date() ? 'expired' : 'active'}`}>
+                    {new Date(extendTargetToken.expires_at) < new Date() ? 'EXPIRED' : 'ACTIVE'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Current Cut-off:</span>
+                  <span>{new Date(extendTargetToken.expires_at).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Usage:</span>
+                  <span>{extendTargetToken.used_count || 0} / {extendTargetToken.max_uses} used</span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Quick Add Extension</label>
+                <div className="quick-extend-grid">
+                  <button type="button" onClick={() => handleApplyExtendPreset(7)} className="quick-extend-btn">
+                    +7 Days
+                  </button>
+                  <button type="button" onClick={() => handleApplyExtendPreset(15)} className="quick-extend-btn">
+                    +15 Days
+                  </button>
+                  <button type="button" onClick={() => handleApplyExtendPreset(30)} className="quick-extend-btn">
+                    +30 Days
+                  </button>
+                  <button type="button" onClick={() => handleApplyExtendPreset(60)} className="quick-extend-btn">
+                    +60 Days
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group" style={{ flex: 2 }}>
+                  <label className="form-label">New Fixed Expiry Date * (HTML5 Calendar)</label>
+                  <input
+                    type="date"
+                    required
+                    min={new Date().toISOString().split('T')[0]}
+                    value={extendNewDate}
+                    onChange={(e) => setExtendNewDate(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">Cut-off Time</label>
+                  <input
+                    type="time"
+                    value={extendNewTime}
+                    onChange={(e) => setExtendNewTime(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Max Uses / Scans (Limit)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="5000"
+                  value={extendMaxUses}
+                  onChange={(e) => setExtendMaxUses(e.target.value)}
+                  className="form-input"
+                />
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                  Increase the scan cap if more students in this batch need to enroll.
+                </small>
+              </div>
+
+              <div className="form-group" style={{ marginTop: '0.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={extendReactivate}
+                    onChange={(e) => setExtendReactivate(e.target.checked)}
+                  />
+                  <span>Re-activate URL link immediately (if deactivated or expired)</span>
+                </label>
+              </div>
+
+              <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button type="button" onClick={() => setShowExtendModal(false)} className="btn-cancel">
+                  Cancel
+                </button>
+                <button type="submit" disabled={extendSubmitting} className="btn-primary-action">
+                  {extendSubmitting ? <RefreshCw size={16} className="spin" /> : <CalendarPlus size={16} />}
+                  <span>Save & Extend Validity</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
