@@ -29,6 +29,8 @@ import {
   FileText,
   CheckCircle2,
   ArrowRight,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import SeatMatrixModal from '@/components/SeatMatrixModal';
 import { DEPARTMENTS_CATALOG, SEAT_RESERVATION_CATEGORIES } from '@/lib/constants';
@@ -42,6 +44,9 @@ export default function FacultyPage() {
 
   // Department Approvals State
   const [joinRequests, setJoinRequests] = useState([]);
+  const [expandedRequestId, setExpandedRequestId] = useState(null);
+  const [joinReviewNotes, setJoinReviewNotes] = useState({});
+  const [reviewSubmittingId, setReviewSubmittingId] = useState(null);
   const [changeRequests, setChangeRequests] = useState([]);
   const [notes, setNotes] = useState('');
 
@@ -247,7 +252,8 @@ export default function FacultyPage() {
   }
 
   // Review Join Request
-  async function handleReviewJoin(requestId, action) {
+  async function handleReviewJoin(requestId, action, customNotes = null) {
+    setReviewSubmittingId(requestId);
     try {
       const res = await fetch('/api/join-requests', {
         method: 'PATCH',
@@ -255,7 +261,7 @@ export default function FacultyPage() {
         body: JSON.stringify({
           request_id: requestId,
           action,
-          superior_notes: notes,
+          superior_notes: customNotes !== null ? customNotes : notes,
         }),
       });
       if (res.ok) {
@@ -263,9 +269,15 @@ export default function FacultyPage() {
         setNotes('');
         setSavedSuccess(true);
         setTimeout(() => setSavedSuccess(false), 3000);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Failed to ${action.toLowerCase()} request: ${errData.error || 'Server error'}`);
       }
     } catch (err) {
       console.error(err);
+      alert('Network error processing request');
+    } finally {
+      setReviewSubmittingId(null);
     }
   }
 
@@ -521,56 +533,199 @@ export default function FacultyPage() {
                 <p>No pending join requests in your departmental queue.</p>
               </div>
             ) : (
-              <div className="requests-grid">
-                {joinRequests.map((req) => (
-                  <div key={req.id} className="request-card">
-                    <div className="request-card-header">
-                      <div className="applicant-avatar-circle">
-                        {(req.applicant_name || 'U')[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <h4 className="applicant-name">{req.applicant_name}</h4>
-                        <span className="applicant-email">{req.applicant_email}</span>
-                      </div>
-                    </div>
+              <div className="join-requests-list-container">
+                {joinRequests.map((req) => {
+                  const isExpanded = expandedRequestId === req.id;
+                  const deptObj = DEPARTMENTS_CATALOG.find((d) => d.id === req.department_id);
+                  const deptName = deptObj?.name || req.department_id;
+                  const noteForReq = joinReviewNotes[req.id] || '';
+                  const isSubmitting = reviewSubmittingId === req.id;
 
-                    <div className="request-card-details">
-                      <div className="detail-item">
-                        <span className="lbl">Role Requested:</span>
-                        <span className="val highlight">{req.requested_role}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="lbl">Department:</span>
-                        <span className="val">
-                          {DEPARTMENTS_CATALOG.find((d) => d.id === req.department_id)?.name || req.department_id}
-                        </span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="lbl">Admission Ref No:</span>
-                        <span className="val">{req.admission_or_emp_no || 'N/A'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="lbl">Contact Mobile:</span>
-                        <span className="val">{req.mobile_number || 'N/A'}</span>
-                      </div>
-                    </div>
+                  return (
+                    <div
+                      key={req.id}
+                      className={`join-request-list-card ${isExpanded ? 'expanded' : ''}`}
+                    >
+                      {/* Collapsed / Main List Row */}
+                      <div
+                        onClick={() => setExpandedRequestId(isExpanded ? null : req.id)}
+                        className="join-request-row-summary"
+                        title="Click to view full candidate details"
+                      >
+                        <div className="req-summary-left">
+                          <span className="req-chevron">
+                            {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                          </span>
 
-                    <div className="request-actions">
-                      <button
-                        onClick={() => handleReviewJoin(req.id, 'APPROVE')}
-                        className="btn-approve"
-                      >
-                        <CheckCircle size={15} /> Verify & Unlock Onboarding
-                      </button>
-                      <button
-                        onClick={() => handleReviewJoin(req.id, 'REJECT')}
-                        className="btn-reject"
-                      >
-                        <XCircle size={15} /> Reject
-                      </button>
+                          <div className="applicant-avatar-circle">
+                            {req.applicant_avatar ? (
+                              <img src={req.applicant_avatar} alt={req.applicant_name} />
+                            ) : (
+                              (req.applicant_name || 'U')[0].toUpperCase()
+                            )}
+                          </div>
+
+                          <div className="req-primary-info">
+                            <span className="req-applicant-name">
+                              {req.applicant_name}
+                            </span>
+                            <span className="req-applicant-email">{req.applicant_email}</span>
+                          </div>
+
+                          <div className="req-chips-cluster">
+                            <span className="chip-tag dept">{deptName}</span>
+                            <span className="badge role">{req.requested_role}</span>
+                            {req.admission_or_emp_no && (
+                              <span className="chip-tag ref">Ref: {req.admission_or_emp_no}</span>
+                            )}
+                            {req.mobile_number && (
+                              <span className="chip-tag phone">📞 {req.mobile_number}</span>
+                            )}
+                            <span className="chip-tag time">
+                              {new Date(req.created_at).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Direct in-row Approve & Reject buttons */}
+                        <div className="req-summary-right" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={() => handleReviewJoin(req.id, 'APPROVE', noteForReq)}
+                            className="btn-row-approve"
+                            title="Approve & Unlock Onboarding directly from row"
+                          >
+                            {isSubmitting ? <RefreshCw size={14} className="spin" /> : <CheckCircle size={14} />}
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={() => handleReviewJoin(req.id, 'REJECT', noteForReq)}
+                            className="btn-row-reject"
+                            title="Reject Join Request directly from row"
+                          >
+                            <XCircle size={14} />
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expanded Student Detail Drawer */}
+                      {isExpanded && (
+                        <div className="student-detail-drawer">
+                          <div className="student-detail-header">
+                            <div className="detail-header-left">
+                              <div className="applicant-avatar-circle large">
+                                {req.applicant_avatar ? (
+                                  <img src={req.applicant_avatar} alt={req.applicant_name} />
+                                ) : (
+                                  (req.applicant_name || 'U')[0].toUpperCase()
+                                )}
+                              </div>
+                              <div>
+                                <div className="detail-student-title">
+                                  <h4>{req.applicant_name}</h4>
+                                  <span className="status-pill pending">Pending Superior Verification</span>
+                                </div>
+                                <p className="detail-student-subtitle">
+                                  Authenticated Google Account: <strong>{req.applicant_email}</strong> &bull; Submitted on {new Date(req.created_at).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="detail-header-right">
+                              <span className="ask-once-badge">
+                                🛡️ Maker-Checker Stage 1 of 2
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="student-detail-grid">
+                            <div className="student-info-block">
+                              <span className="block-label">Assigned Department</span>
+                              <div className="block-value strong">{deptName} ({deptObj?.code || req.department_id})</div>
+                            </div>
+                            <div className="student-info-block">
+                              <span className="block-label">Target Role</span>
+                              <div className="block-value role-highlight">{req.requested_role}</div>
+                            </div>
+                            <div className="student-info-block">
+                              <span className="block-label">Admission / Reference No</span>
+                              <div className="block-value mono">{req.admission_or_emp_no || 'Not provided'}</div>
+                            </div>
+                            <div className="student-info-block">
+                              <span className="block-label">Contact Mobile Number</span>
+                              <div className="block-value">{req.mobile_number || 'Not provided'}</div>
+                            </div>
+                            <div className="student-info-block">
+                              <span className="block-label">Designated Batch / Scope</span>
+                              <div className="block-value">{req.batch_id || 'Institutional Baseline Batch'}</div>
+                            </div>
+                            <div className="student-info-block">
+                              <span className="block-label">Enrollment Token Source</span>
+                              <div className="block-value mono">{req.token_id ? `#${req.token_id}` : 'Dynamic QR Link / Self-Enrollment'}</div>
+                            </div>
+                          </div>
+
+                          <div className="student-audit-guideline">
+                            <div className="guideline-icon">ℹ️</div>
+                            <div className="guideline-text">
+                              <strong>Superior Verification Directive ("Ask Once" Architecture):</strong> Cross-verify this applicant against your department's official admission list or candidate rolls. Approving this request activates their institutional credentials and unlocks the comprehensive master onboarding wizard.
+                            </div>
+                          </div>
+
+                          <div className="student-detail-footer">
+                            <div className="superior-notes-input-wrap">
+                              <label className="notes-label">Departmental Verification Remarks (Optional):</label>
+                              <input
+                                type="text"
+                                value={noteForReq}
+                                onChange={(e) => setJoinReviewNotes({ ...joinReviewNotes, [req.id]: e.target.value })}
+                                placeholder="e.g. Verified against University Allotment memo #742"
+                                className="form-input superior-notes-input"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+
+                            <div className="footer-action-buttons">
+                              <button
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReviewJoin(req.id, 'APPROVE', noteForReq);
+                                }}
+                                className="btn-approve"
+                              >
+                                {isSubmitting ? <RefreshCw size={15} className="spin" /> : <CheckCircle size={15} />}
+                                <span>Approve & Unlock Onboarding</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReviewJoin(req.id, 'REJECT', noteForReq);
+                                }}
+                                className="btn-reject"
+                              >
+                                <XCircle size={15} />
+                                <span>Reject Candidate</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
