@@ -107,31 +107,35 @@ function UnauthorizedContent() {
       </div>
 
       <p className="unauthorized-message">
-        This Gmail account is not currently listed in the accepted students directory.
+        This account does not currently have active access permissions or is awaiting departmental review.
       </p>
 
       <div className="unauthorized-instructions">
         <h3>How to gain access:</h3>
         <ol>
           <li>
-            Contact the <strong>Academic Administration Office</strong> or your Department Coordinator.
+            <strong>New Student / Candidate:</strong> Scan the official <strong>Dynamic QR Code</strong> or open the <strong>Self-Enrollment Link</strong> (e.g. <code>/join/TOKEN</code>) provided by your Department to submit a join request.
           </li>
           <li>
-            Provide your <strong>Official Student ID / Roll Number</strong> and this exact Gmail address.
+            <strong>Pending Verification:</strong> If you already submitted a request, your Department Superior (Faculty / HoD) must verify it against the admission roster.
           </li>
           <li>
-            Once the Admin enrolls your Gmail into the accepted list, you will be able to log in immediately.
+            <strong>Existing Enrolled Member:</strong> Contact the Academic Administration Office to verify your account status.
           </li>
         </ol>
       </div>
 
       <div className="unauthorized-actions">
+        <Link href="/join" className="btn btn-primary">
+          <span>Go to Self-Enrollment</span>
+        </Link>
+
         <button
           onClick={() => {
             signOut({ redirect: false });
             signIn('google');
           }}
-          className="btn btn-primary"
+          className="btn btn-secondary"
         >
           <RefreshCw size={16} />
           <span>Try Another Account</span>

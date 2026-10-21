@@ -156,12 +156,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       try {
         const dbUser = await getUserWithRoles(email);
-        if (dbUser && dbUser.status === 'ACTIVE') {
-          await recordStudentLogin(email);
-          return true;
+        if (dbUser) {
+          if (dbUser.status === 'SUSPENDED') {
+            return `/unauthorized?email=${encodeURIComponent(email)}&reason=suspended`;
+          }
+          if (dbUser.status === 'ACTIVE') {
+            await recordStudentLogin(email);
+            return true;
+          }
         }
       } catch (err) {
         console.error('Error verifying user during sign in:', err);
+      }
+
+      // Allow Google authentication so applicants can sign in with their Gmail
+      // to access dynamic QR / activation links, submit join requests, and track verification
+      if (account?.provider === 'google') {
+        return true;
       }
 
       return `/unauthorized?email=${encodeURIComponent(email)}`;
@@ -221,6 +232,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.role = token.activeRole;
           }
           token.userProfile = dbUser || null;
+          token.isEnrolled = Boolean(dbUser && dbUser.status === 'ACTIVE');
         } catch (err) {
           console.error('Error building JWT token roles:', err);
         }
@@ -247,6 +259,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.activeRole = token.activeRole || 'STUDENT';
         session.user.role = token.activeRole || 'STUDENT';
         session.user.profile = token.userProfile || null;
+        session.user.isEnrolled = Boolean(token.isEnrolled);
       }
       return session;
     },

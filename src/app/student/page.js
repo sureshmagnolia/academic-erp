@@ -27,6 +27,8 @@ import {
   ArrowRight,
   ShieldAlert,
   Eye,
+  RefreshCw,
+  QrCode,
 } from 'lucide-react';
 
 export default function StudentPage() {
@@ -37,6 +39,8 @@ export default function StudentPage() {
   const [academicRecords, setAcademicRecords] = useState([]);
   const [myChanges, setMyChanges] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [myJoinRequest, setMyJoinRequest] = useState(null);
+  const [inputToken, setInputToken] = useState('');
 
   // Change Request Modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -80,6 +84,17 @@ export default function StudentPage() {
       const resChanges = await fetch('/api/change-requests');
       const dataChanges = await resChanges.json();
       if (dataChanges.changeRequests) setMyChanges(dataChanges.changeRequests);
+
+      // 4. My Join Request Status
+      try {
+        const resJoin = await fetch('/api/join-requests?mine=true');
+        const dataJoin = await resJoin.json();
+        if (dataJoin.requests && dataJoin.requests.length > 0) {
+          setMyJoinRequest(dataJoin.requests[0]);
+        }
+      } catch (e) {
+        console.error('Error loading my join request:', e);
+      }
     } catch (err) {
       console.error('Error loading student data:', err);
     } finally {
@@ -195,6 +210,124 @@ export default function StudentPage() {
             <button onClick={() => update({ activeRole: 'STUDENT' })} className="btn btn-secondary">
               Switch Simulated Role to Student
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If the user has authenticated with Google, but is not yet an enrolled student
+  const isEnrolled = session?.user?.isEnrolled || Boolean(profile && profile.profile_status === 'APPROVED');
+  if (!isSuperAdmin && !isEnrolled && !profile) {
+    if (myJoinRequest && myJoinRequest.status === 'PENDING') {
+      return (
+        <div className="student-portal-wrapper">
+          <div className="student-pending-join-card">
+            <div className="pending-badge">
+              <Clock size={18} className="spin" />
+              <span>ACADEMIC SELF-ENROLLMENT UNDER SUPERIOR REVIEW</span>
+            </div>
+            <h2>Join Request Submitted & Awaiting Department Approval</h2>
+            <p className="pending-lead">
+              Your self-enrollment request has been securely recorded and dispatched to your <strong>Department Superior (Faculty / HoD)</strong> for official admission list verification.
+            </p>
+            <div className="pending-details-box">
+              <div className="detail-item">
+                <span className="lbl">Applicant Name:</span>
+                <span className="val">{myJoinRequest.applicant_name || session.user.name}</span>
+              </div>
+              <div className="detail-item">
+                <span className="lbl">Verified Google Email:</span>
+                <span className="val">{myJoinRequest.applicant_email || session.user.email}</span>
+              </div>
+              <div className="detail-item">
+                <span className="lbl">Application / CAP Ref:</span>
+                <span className="val">{myJoinRequest.admission_or_emp_no || 'Pending Assignment'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="lbl">Target Department:</span>
+                <span className="val">{myJoinRequest.department_id}</span>
+              </div>
+              <div className="detail-item">
+                <span className="lbl">Submission Timestamp:</span>
+                <span className="val">{new Date(myJoinRequest.created_at).toLocaleString()}</span>
+              </div>
+              <div className="detail-item">
+                <span className="lbl">Current Status:</span>
+                <span className="val status-pill-pending">⏳ PENDING PHYSICAL AUDIT</span>
+              </div>
+            </div>
+            <p className="pending-hint">
+              Once your Superior approves your request, your student profile will activate and you will be directed to complete the Master Onboarding Wizard (Ask Once).
+            </p>
+            <div className="pending-actions-row">
+              <button onClick={loadStudentData} className="btn btn-primary">
+                <RefreshCw size={16} /> Refresh Verification Status
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (myJoinRequest && myJoinRequest.status === 'CORRECTION_REQUESTED') {
+      return (
+        <div className="student-portal-wrapper">
+          <div className="student-pending-join-card">
+            <div className="pending-badge warning">
+              <AlertTriangle size={18} />
+              <span>ACTION REQUIRED: CORRECTIONS REQUESTED BY SUPERIOR</span>
+            </div>
+            <h2>Department Superior Requested Corrections</h2>
+            <p>
+              Your Department Superior reviewed your join request and requested corrections before approval:
+            </p>
+            <div className="superior-notes-box">
+              <strong>Superior Note:</strong> {myJoinRequest.superior_notes || 'Please verify your application details and re-submit.'}
+            </div>
+            <Link href="/join" className="btn btn-primary">
+              Re-submit Join Request
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="student-portal-wrapper">
+        <div className="student-pending-join-card">
+          <div className="pending-badge warning">
+            <QrCode size={18} />
+            <span>SELF-ENROLLMENT REQUIRED</span>
+          </div>
+          <h2>Academic Self-Enrollment Required</h2>
+          <p className="pending-lead">
+            Welcome, <strong>{session.user.name}</strong> ({session.user.email}). You are authenticated via Google, but your account is not yet enrolled in any academic department or degree program.
+          </p>
+          <p>
+            To gain access, please scan the official <strong>Dynamic QR Code</strong> or open the <strong>Self-Enrollment Link</strong> provided by your Department Superior / Admission Cell.
+          </p>
+          <div className="token-enter-container">
+            <label className="lbl">Have an Enrollment Token or Link?</label>
+            <div className="token-input-group">
+              <input
+                type="text"
+                placeholder="Paste token or link (e.g. enr_... or https://.../join/enr_...)"
+                value={inputToken}
+                onChange={(e) => setInputToken(e.target.value)}
+                className="token-input"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const clean = inputToken.trim().split('/').pop();
+                  if (clean) window.location.href = `/join/${clean}`;
+                }}
+                className="btn btn-primary"
+              >
+                Join Program <ArrowRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

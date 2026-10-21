@@ -5,18 +5,26 @@ import {
   listJoinRequests,
   reviewJoinRequest,
   getEnrollmentToken,
+  getJoinRequestsByEmail,
 } from '@/lib/db';
 
 export async function GET(req) {
   const session = await auth();
-  const roles = session?.user?.roles?.map((r) => (typeof r === 'string' ? r : r.code)) || [];
-  const isSuperior = roles.some((r) => ['ADMIN', 'PRINCIPAL', 'HOD', 'FACULTY'].includes(r));
-
-  if (!isSuperior) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
+  const myRequestsOnly = searchParams.get('mine') === 'true';
+
+  const roles = session?.user?.roles?.map((r) => (typeof r === 'string' ? r : r.code)) || [];
+  const isSuperior = roles.some((r) => ['ADMIN', 'PRINCIPAL', 'HOD', 'FACULTY'].includes(r));
+
+  if (myRequestsOnly || !isSuperior) {
+    const myRequests = await getJoinRequestsByEmail(session.user.email);
+    return NextResponse.json({ requests: myRequests });
+  }
+
   const status = searchParams.get('status') || 'PENDING';
   const department_id = searchParams.get('department_id') || undefined;
 

@@ -1310,21 +1310,36 @@ export async function createJoinRequest({
   return reqObj;
 }
 
-export async function listJoinRequests({ status = 'PENDING', department_id } = {}) {
+export async function listJoinRequests({ status, department_id, applicant_email } = {}) {
   await initDb();
   const sql = getSql();
+  const cleanEmail = applicant_email ? applicant_email.trim().toLowerCase() : null;
+
   if (sql) {
     try {
-      if (department_id) {
+      if (cleanEmail) {
+        return await sql`
+          SELECT * FROM join_requests 
+          WHERE LOWER(applicant_email) = ${cleanEmail}
+          ORDER BY created_at DESC
+        `;
+      }
+      if (department_id && status) {
         return await sql`
           SELECT * FROM join_requests 
           WHERE status = ${status} AND department_id = ${department_id}
           ORDER BY created_at DESC
         `;
       }
+      if (status) {
+        return await sql`
+          SELECT * FROM join_requests 
+          WHERE status = ${status}
+          ORDER BY created_at DESC
+        `;
+      }
       return await sql`
         SELECT * FROM join_requests 
-        WHERE status = ${status}
         ORDER BY created_at DESC
       `;
     } catch (err) {
@@ -1333,10 +1348,16 @@ export async function listJoinRequests({ status = 'PENDING', department_id } = {
   }
 
   return memoryStore.join_requests.filter((r) => {
+    if (cleanEmail && r.applicant_email.toLowerCase() !== cleanEmail) return false;
     if (status && r.status !== status) return false;
     if (department_id && r.department_id !== department_id) return false;
     return true;
   });
+}
+
+export async function getJoinRequestsByEmail(email) {
+  if (!email) return [];
+  return listJoinRequests({ applicant_email: email });
 }
 
 export async function reviewJoinRequest({ request_id, action, reviewed_by, superior_notes }) {

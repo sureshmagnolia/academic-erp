@@ -41,11 +41,30 @@ function JoinEnrollmentContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [existingRequest, setExistingRequest] = useState(null);
 
   useEffect(() => {
     if (session?.user?.name) {
       setFullName(session.user.name);
     }
+
+    async function checkMyExistingRequest() {
+      if (!session?.user?.email) return;
+      try {
+        const res = await fetch('/api/join-requests?mine=true');
+        const data = await res.json();
+        if (data.requests && data.requests.length > 0) {
+          const req = data.requests[0];
+          setExistingRequest(req);
+          if (req.status === 'PENDING') {
+            setSubmitSuccess(true);
+          }
+        }
+      } catch (err) {
+        // Silently ignore
+      }
+    }
+    checkMyExistingRequest();
   }, [session]);
 
   useEffect(() => {
